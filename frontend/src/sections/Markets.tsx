@@ -15,21 +15,6 @@ export default function InternationalReach() {
 
       <div className="relative mx-auto grid min-h-svh max-w-[1500px] grid-rows-[auto_1fr] gap-6 pt-20 md:pt-24 lg:pt-24">
         <div className="relative z-20 grid gap-6 lg:grid-cols-[0.42fr_1fr] lg:items-end">
-          <motion.p
-            initial={reduced ? false : { opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.7 }}
-            transition={{ duration: reduced ? 0.01 : 0.45, ease }}
-            className="text-xs font-semibold uppercase tracking-[0.28em] text-[#c7954b]"
-          >
-            <span className="flex items-center justify-between gap-5">
-              <span>
-              Global network
-              </span>
-              <span>04 / Network</span>
-            </span>
-          </motion.p>
-
           <motion.h2
             initial={reduced ? false : { opacity: 0 }}
             whileInView={{ opacity: 1 }}

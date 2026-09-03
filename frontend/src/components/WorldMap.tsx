@@ -97,8 +97,8 @@ const europe = ["at", "be", "bg", "hr", "cy", "cz", "dk", "ee", "es", "fi", "fr"
 const middleEast = ["tr", "sy", "lb", "jo", "il", "ps", "iq", "ir", "kw", "bh", "qa", "ae", "om", "sa", "ye", "kz", "uz", "tm", "kg", "tj", "af", "pk"];
 const coreCountries = ["pl", "de", "lu", "ie", "sa", "ae"];
 const networkNodes: NetworkNode[] = [
-  { country: "pl", region: "europe", x: 55.4, y: 27.3, labelOffset: "-translate-x-[92%] -translate-y-[122%] text-right" },
-  { country: "ae", region: "middle-east", x: 65.1, y: 36.6, labelOffset: "translate-x-4 -translate-y-1/2 text-left" },
+  { country: "pl", region: "europe", x: 53.2, y: 44.6, labelOffset: "-translate-x-[92%] -translate-y-[122%] text-right" },
+  { country: "ae", region: "middle-east", x: 59.4, y: 57.2, labelOffset: "translate-x-4 -translate-y-1/2 text-left" },
 ];
 
 const filterLabels = {
@@ -110,6 +110,8 @@ const filterLabels = {
     exploring: "Exploring",
     reset: "Reset",
     view: "View",
+    regionEurope: "Europe",
+    regionMiddleEast: "Middle East",
   },
   pl: {
     all: "Cała sieć",
@@ -119,6 +121,8 @@ const filterLabels = {
     exploring: "Eksploracja",
     reset: "Reset",
     view: "Zobacz",
+    regionEurope: "Europa",
+    regionMiddleEast: "Bliski Wschód",
   },
 };
 
@@ -142,6 +146,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [isCursorVisible, setIsCursorVisible] = useState(false);
   const [isFinePointer, setIsFinePointer] = useState(false);
   const [animatedCountries, setAnimatedCountries] = useState<Set<string>>(new Set());
   const [hasDrawnConnection, setHasDrawnConnection] = useState(false);
@@ -263,7 +268,8 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    setCursorPosition({ x: event.clientX, y: event.clientY });
+    const rect = event.currentTarget.getBoundingClientRect();
+    setCursorPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     if (!isDragging) return;
     const maxPan = 220 * zoomLevel;
     setPanPosition({
@@ -280,7 +286,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   };
 
   const regionIsActive = (country: string) => filterRegion === "all" || getRegion(country) === filterRegion;
-  const selectedPanelRegion = selectedCountry ? (getRegion(selectedCountry.country) === "middle-east" ? "Middle East" : "Europe") : "";
+  const selectedPanelRegion = selectedCountry ? (getRegion(selectedCountry.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope) : "";
   const cursorCountry = hoveredCountry ? data.find((item) => item.country === hoveredCountry)?.name : null;
 
   return (
@@ -328,15 +334,21 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
+          onPointerEnter={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setCursorPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+            setIsCursorVisible(true);
+          }}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           onPointerLeave={() => {
             setIsDragging(false);
             setHoveredCountry(null);
+            setIsCursorVisible(false);
           }}
         >
           <div
-            className="absolute left-1/2 top-1/2 h-[520px] w-[1040px] -translate-x-1/2 -translate-y-1/2 sm:h-[600px] sm:w-[1200px] lg:h-[650px] lg:w-[1300px]"
+            className="absolute left-1/2 top-1/2 h-[520px] w-[1040px] sm:h-[600px] sm:w-[1200px] lg:h-[650px] lg:w-[1300px]"
             style={{
               transform: `translate(-50%, -50%) scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
               transition: isDragging || reduced ? "none" : "transform 520ms cubic-bezier(.22,1,.36,1)",
@@ -388,7 +400,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
 
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <motion.path
-                d="M55.4 27.3 C 58.8 28.1, 62.4 32.4, 65.1 36.6"
+                d="M53.2 44.6 C 55.2 46.8, 57.4 52, 59.4 57.2"
                 fill="none"
                 stroke="#c99a57"
                 strokeWidth="0.15"
@@ -400,7 +412,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
               />
               {!reduced && hasDrawnConnection && (
                 <circle r="0.34" fill="#d6b16d" opacity="0.72">
-                  <animateMotion dur="8s" repeatCount="indefinite" path="M55.4 27.3 C 58.8 28.1, 62.4 32.4, 65.1 36.6" />
+                  <animateMotion dur="8s" repeatCount="indefinite" path="M53.2 44.6 C 55.2 46.8, 57.4 52, 59.4 57.2" />
                 </circle>
               )}
             </svg>
@@ -436,16 +448,16 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
                     className={`pointer-events-none absolute top-0 min-w-28 text-[0.52rem] font-semibold uppercase leading-relaxed tracking-[0.2em] text-[#d2ad6b] ${node.labelOffset}`}
                   >
                     <span className="block">{country.name}</span>
-                    <span className="block text-[#f2efe7]/42">{getRegion(node.country) === "middle-east" ? "Middle East" : "Europe"} · {country.established}</span>
+                    <span className="block text-[#f2efe7]/42">{getRegion(node.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope} · {country.established}</span>
                   </motion.div>
                 </div>
               );
             })}
           </div>
 
-          {isFinePointer && (
+          {isFinePointer && isCursorVisible && (
             <div
-              className="pointer-events-none fixed z-50 hidden border border-[#c99a57]/25 bg-[#0d0d0c]/80 px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/76 backdrop-blur-md lg:block"
+              className="pointer-events-none absolute z-50 hidden border border-[#c99a57]/25 bg-[#0d0d0c]/80 px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/76 backdrop-blur-md lg:block"
               style={{ left: cursorPosition.x + 14, top: cursorPosition.y + 14 }}
             >
               {isDragging ? labels.exploring : cursorCountry ? `${labels.view} ${cursorCountry} ↗` : labels.drag}
