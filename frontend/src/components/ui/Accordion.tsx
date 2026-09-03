@@ -53,7 +53,7 @@ export function Accordion({ type = "single", children, className }: AccordionPro
     >
       {React.Children.map(children, (child, index) =>
         isValidElement(child)
-          ? cloneElement(child as ReactElement<any>, { 
+          ? cloneElement(child as ReactElement<Partial<AccordionItemProps>>, { 
               openItems, 
               handleToggle,
               key: `accordion-item-${index}`
@@ -96,7 +96,7 @@ export function AccordionItem({ value, children, openItems, handleToggle }: Acco
       
       {React.Children.map(children, (child) =>
         isValidElement(child)
-          ? cloneElement(child as ReactElement<any>, { value, openItems, handleToggle })
+          ? cloneElement(child as ReactElement<Partial<AccordionTriggerProps & AccordionContentProps>>, { value, openItems, handleToggle })
           : child
       )}
     </motion.div>

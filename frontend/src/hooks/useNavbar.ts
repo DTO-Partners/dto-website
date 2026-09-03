@@ -14,6 +14,7 @@ export interface UseNavbarReturn {
   isMobileMenuOpen: boolean;
   currentLang: string;
   navItems: NavItem[];
+  activeSection: string;
   isVisible: boolean;
   toggleMobileMenu: () => void;
   closeMobileMenu: () => void;
@@ -25,21 +26,21 @@ export function useNavbar(): UseNavbarReturn {
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up');
   const [isVisible, setIsVisible] = useState<boolean>(true);
-  const [lastScrollY, setLastScrollY] = useState<number>(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  const { t, i18n } = useTranslation();
+  const [activeSection, setActiveSection] = useState<string>("Hero");
+  const { i18n } = useTranslation();
   const currentLang = i18n.language;
 
   const navItems: NavItem[] = [
-    { label: t("nav.aboutus"), id: "AboutUs" },
-    { label: t("nav.markets"), id: "Markets" },
-    { label: t("nav.Candidates&Employers"), id: "Candidates & Employers" },
-    { label: t("nav.contact"), id: "Contact" },
+    { label: "What", id: "AboutUs" },
+    { label: "Expertise", id: "Industries" },
+    { label: "Network", id: "Markets" },
   ];
 
   useEffect(() => {
     let ticking = false;
-    let previousScrollY = lastScrollY;
+    let previousScrollY = window.scrollY;
+    const sectionIds = ["Hero", "AboutUs", "Industries", "Testimonials", "Markets", "Candidates & Employers"];
     
     const handleScroll = () => {
       if (!ticking) {
@@ -55,7 +56,15 @@ export function useNavbar(): UseNavbarReturn {
           }
           
           // Background visibility - simpler logic
-          setIsScrolled(scrollPosition > 50);
+          setIsScrolled(scrollPosition > window.innerHeight * 0.76);
+
+          for (let index = sectionIds.length - 1; index >= 0; index -= 1) {
+            const element = document.getElementById(sectionIds[index]);
+            if (element && scrollPosition >= element.offsetTop - window.innerHeight * 0.42) {
+              setActiveSection(sectionIds[index]);
+              break;
+            }
+          }
           
           // Navbar visibility logic - cleaner and more predictable
           if (scrollPosition <= 100) {
@@ -76,7 +85,6 @@ export function useNavbar(): UseNavbarReturn {
           
           // Update previous scroll position
           previousScrollY = scrollPosition;
-          setLastScrollY(scrollPosition);
           ticking = false;
         });
         ticking = true;
@@ -128,6 +136,7 @@ export function useNavbar(): UseNavbarReturn {
     isMobileMenuOpen,
     currentLang,
     navItems,
+    activeSection,
     isVisible,
     toggleMobileMenu,
     closeMobileMenu,

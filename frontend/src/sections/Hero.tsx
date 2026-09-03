@@ -1,9 +1,20 @@
+import { useRef } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { VideoBackground } from '@/components/hero/VideoBackground';
-import { AnimatedParticles } from '@/components/hero/AnimatedParticles';
 import { HeroContent } from '@/components/hero/HeroContent';
-import { ScrollIndicator } from '@/components/hero/ScrollIndicator';
 
 export default function Hero() {
+  const heroRef = useRef<HTMLElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const videoScale = useTransform(scrollYProgress, [0, 1], reduced ? [1, 1] : [1, 1.055]);
+  const overlayOpacity = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [0, 0.34]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.72], reduced ? [1, 1] : [1, 0]);
+  const contentY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [0, -54]);
+
   const scrollToNext = () => {
     const nextSection = document.getElementById("AboutUs");
     nextSection?.scrollIntoView({ behavior: "smooth" });
@@ -11,26 +22,17 @@ export default function Hero() {
 
   return (
     <section 
+      ref={heroRef}
       id="Hero" 
-      className="relative w-full h-screen min-h-[100vh] max-h-screen overflow-hidden"
-      style={{ height: '100vh', minHeight: '100vh' }}
+      className="relative min-h-svh w-full overflow-hidden bg-stone-950"
     >
-      {/* Video Background - Fixed positioning to prevent scroll issues */}
-      <div className="absolute inset-0 w-full h-full z-0" style={{ zIndex: 0 }}>
+      <motion.div style={{ scale: videoScale }} className="absolute inset-0 z-0 h-full w-full">
         <VideoBackground />
-      </div>
-      
-      {/* Content Layer */}
-      <div className="relative z-10 w-full h-full" style={{ zIndex: 10 }}>
-        {/* Animated Particles */}
-        <AnimatedParticles count={20} />
-        
-        {/* Hero Content */}
+      </motion.div>
+      <motion.div style={{ opacity: overlayOpacity }} className="pointer-events-none absolute inset-0 z-[1] bg-black" />
+      <motion.div style={{ opacity: contentOpacity, y: contentY }} className="relative z-10">
         <HeroContent isLoaded={true} onScrollToNext={scrollToNext} />
-
-        {/* Scroll Indicator */}
-        <ScrollIndicator onScrollToNext={scrollToNext} />
-      </div>
+      </motion.div>
     </section>
   );
 }

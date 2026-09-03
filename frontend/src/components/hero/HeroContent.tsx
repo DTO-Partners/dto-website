@@ -1,98 +1,72 @@
-import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Link } from "react-scroll";
 
 interface HeroContentProps {
   readonly isLoaded: boolean;
   readonly onScrollToNext: () => void;
 }
 
+const ease = [0.22, 1, 0.36, 1] as const;
+
 export function HeroContent({ isLoaded, onScrollToNext }: HeroContentProps) {
-  const { t } = useTranslation();
+  const reduced = useReducedMotion();
 
   return (
-    <div className="relative z-10 flex items-center justify-center min-h-screen px-6">
-      <motion.div
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : 60 }}
-        transition={{ duration: 1.2, ease: "easeOut" }}
-        className="text-center max-w-6xl mx-auto"
-      >
-        {/* Premium Badge */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.8 }}
-          className="inline-block mb-8"
-        >
-          <div className="px-6 py-3 hero-backdrop-blur hero-glow border border-white/20 rounded-full">
-            <span className="text-white/90 text-sm font-medium tracking-widest uppercase">
-              {t("hero.badge")}
-            </span>
-          </div>
-        </motion.div>
-
-        {/* Main Heading */}
-        <motion.h1
-          className="text-6xl md:text-8xl lg:text-9xl font-light text-white mb-8 tracking-tight leading-none hero-text-shadow"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 1 }}
-        >
-          {t("hero.title.first")}
-          <motion.span 
-            className="block font-bold hero-gradient-text"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 1 }}
-          >
-            {t("hero.title.second")}
-          </motion.span>
-        </motion.h1>
-
-        {/* Elegant Divider */}
-        <motion.div 
-          className="w-32 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent mx-auto mb-8"
-          initial={{ width: 0 }}
-          animate={{ width: 128 }}
-          transition={{ delay: 1.2, duration: 1.5 }}
-        />
-
-        {/* Subtitle */}
+    <div className="relative z-10 min-h-svh px-5 pb-7 pt-28 md:px-8 lg:px-12">
+      <div className="mx-auto flex min-h-[calc(100svh-8.75rem)] max-w-[1500px] flex-col justify-between">
         <motion.p
-          className="text-xl md:text-2xl text-white/90 mb-12 font-light leading-relaxed max-w-4xl mx-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4, duration: 0.8 }}
+          initial={reduced ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : 20 }}
+          transition={{ duration: 0.7, ease }}
+          className="ml-auto hidden text-xs font-semibold uppercase tracking-[0.26em] text-white/74 md:block"
         >
-          {t("hero.subtitle.main")}
-          <br />
-          <span className="text-white/70 text-lg">{t("hero.subtitle.tagline")}</span>
+          Europe / Middle East
         </motion.p>
 
-        {/* CTA Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.8, duration: 0.8 }}
-          className="flex flex-col sm:flex-row gap-6 justify-center items-center"
-        >
-          <motion.button
-            onClick={onScrollToNext}
-            className="group px-8 py-4 hero-backdrop-blur hero-glow border border-white/20 rounded-full text-white font-medium transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-105"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+        <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <motion.h1
+            initial={reduced ? false : { opacity: 0, y: 34 }}
+            animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : 34 }}
+            transition={{ delay: 0.18, duration: 0.9, ease }}
+            className="max-w-6xl text-[clamp(4.5rem,10vw,10rem)] font-semibold uppercase leading-[0.86] tracking-normal text-white"
           >
-            {t("hero.cta.button")}
-            <motion.span
-              className="inline-block ml-2"
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+            Talent
+            <br />
+            Without
+            <br />
+            Borders.
+          </motion.h1>
+
+          <motion.div
+            initial={reduced ? false : { opacity: 0, x: 24 }}
+            animate={{ opacity: isLoaded ? 1 : 0, x: isLoaded ? 0 : 24 }}
+            transition={{ delay: 0.4, duration: 0.75, ease }}
+            className="border-l border-white/28 pl-5 text-white"
+          >
+            <p className="text-sm uppercase tracking-[0.22em] text-white/70">Poland based. International search.</p>
+            <Link
+              to="Candidates & Employers"
+              smooth
+              duration={650}
+              offset={-90}
+              className="mt-8 inline-flex min-h-12 cursor-pointer items-center gap-3 border-b border-white/55 pb-2 text-sm font-semibold uppercase tracking-[0.18em] transition hover:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
             >
-              →
-            </motion.span>
-          </motion.button>
-        </motion.div>
-      </motion.div>
+              Register
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </motion.div>
+        </div>
+
+        <button
+          onClick={onScrollToNext}
+          className="inline-flex min-h-11 w-fit items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/68 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+          aria-label="Scroll to next section"
+        >
+          Scroll
+          <ArrowDownRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }

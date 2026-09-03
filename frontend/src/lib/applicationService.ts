@@ -122,7 +122,8 @@ export class ApplicationService {
       
       // Log email data for debugging (remove sensitive info)
       const debugData = { ...emailData };
-      const { user_agent, ...debugDataClean } = debugData; // Remove verbose user agent
+      const { user_agent: userAgentForDebug, ...debugDataClean } = debugData;
+      void userAgentForDebug;
       console.log('Sending EmailJS data:', debugDataClean);
       
       // Send main application email (now includes CV download link if available)

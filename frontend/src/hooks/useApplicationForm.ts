@@ -29,7 +29,8 @@ export function useApplicationForm() {
     // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors(prev => {
-        const { [field]: _, ...rest } = prev
+        const rest = { ...prev }
+        delete rest[field]
         return rest
       })
     }

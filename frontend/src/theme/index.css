@@ -7,10 +7,46 @@
     scrollbar-width: none; /* For Firefox */
     -ms-overflow-style: none; /* For Internet Explorer */
     scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body,
+  #root {
+    overflow-x: clip;
   }
 
   body::-webkit-scrollbar {
     display: none; /* For Chrome, Safari, and Edge */
+  }
+
+  .worldmap__figure-container {
+    background: transparent !important;
+  }
+
+  .testimonial-track {
+    animation: testimonial-marquee 34s linear infinite;
+    will-change: transform;
+  }
+
+  .testimonial-marquee:hover .testimonial-track,
+  .testimonial-marquee:focus-within .testimonial-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .testimonial-track {
+      animation: none;
+      transform: none;
+    }
+  }
+
+  @keyframes testimonial-marquee {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
 }
 

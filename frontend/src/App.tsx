@@ -5,12 +5,12 @@ import Navbar from "@components/NavBar"
 import Hero from "@sections/Hero"
 import About from "@sections/About";
 import Values from "./sections/Values";
+import Testimonials from "./sections/Testimonials";
 
 //i18next
 import "@/lib/i18n";
 import Markets from "./sections/Markets";
 import GDPRModal from "./components/GDPRModal";
-import IndustriesSection from "./sections/Industries";
 import ApplyForm from "./sections/Apply";
 import Footer from "./sections/Footer";
 
@@ -22,9 +22,9 @@ function App() {
       <Hero/>
       <About/>
       <Values/>
+      <Testimonials/>
       <Markets/>
       <GDPRModal/>
-      <IndustriesSection/>
       <ApplyForm/>
       <Footer/>
     </div>

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface VideoBackgroundProps {
   className?: string;
@@ -68,7 +68,7 @@ export function VideoBackground({ className = '' }: VideoBackgroundProps) {
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
     };
-  }, [currentVideoSource]);
+  }, [currentVideoSource, fallbackUsed, i18n.language]);
 
   // Effect to handle language changes
   useEffect(() => {
@@ -82,7 +82,7 @@ export function VideoBackground({ className = '' }: VideoBackgroundProps) {
     // Set the new video source
     video.src = currentVideoSource;
     video.load(); // Reload the video with new source
-  }, [i18n.language]); // Watch language directly instead of currentVideoSource
+  }, [currentVideoSource, i18n.language]);
 
   // Effect to handle fallback changes
   useEffect(() => {
@@ -94,24 +94,13 @@ export function VideoBackground({ className = '' }: VideoBackgroundProps) {
   }, [fallbackUsed, currentVideoSource]);
 
   return (
-    <div className={`absolute inset-0 w-full h-full bg-gray-900 ${className}`}>
-      {/* Fallback background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black" />
-      
-      {/* Loading indicator during video transitions */}
-      {isTransitioning && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <p className="text-white/80 text-sm">Loading video...</p>
-          </div>
-        </div>
-      )}
+    <div className={`absolute inset-0 h-full w-full bg-[#11100d] ${className}`}>
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,#11100d,#29231d_42%,#090908)]" />
       
       {!hasError && (
         <video
           ref={videoRef}
-          className={`w-full h-full object-cover transition-opacity duration-500 ${
+          className={`h-full w-full object-cover transition duration-[1800ms] ease-out ${
             isLoaded && !isTransitioning ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
@@ -119,7 +108,7 @@ export function VideoBackground({ className = '' }: VideoBackgroundProps) {
             width: '100%',
             height: '100%',
             display: 'block',
-            transform: 'translateZ(0)',
+            transform: 'translateZ(0) scale(1.035)',
             backfaceVisibility: 'hidden'
           }}
           autoPlay
@@ -133,27 +122,20 @@ export function VideoBackground({ className = '' }: VideoBackgroundProps) {
           Your browser does not support the video tag.
         </video>
       )}
-      
-      {/* Enhanced Multi-layer Gradient Overlays - same as original */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70 pointer-events-none" />
-      
-      {/* Additional center spotlight effect */}
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/30 pointer-events-none" />
-      
-      {/* Loading state */}
+
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(10,10,9,.64),rgba(10,10,9,.12)_48%,rgba(10,10,9,.42))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,9,.46)_0%,rgba(10,10,9,.04)_42%,rgba(10,10,9,.74)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_34%,rgba(255,255,255,.16),transparent_31%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.11] mix-blend-overlay [background-image:linear-gradient(0deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:100%_4px]" />
+
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center z-10">
-          <div className="text-white/60 text-xl font-light">Loading Experience...</div>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#11100d]">
+          <div className="h-px w-24 origin-left animate-pulse bg-white/40" aria-hidden="true" />
         </div>
       )}
-      
-      {/* Error state */}
+
       {hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center z-10">
-          <div className="text-white/60 text-xl font-light">Experience Loading...</div>
-        </div>
+        <div className="absolute inset-0 z-10 bg-[linear-gradient(135deg,#11100d,#29231d_42%,#090908)]" />
       )}
     </div>
   );

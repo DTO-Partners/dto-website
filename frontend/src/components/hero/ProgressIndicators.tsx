@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 
 interface ProgressIndicatorsProps {
-  slides: any[];
+  slides: unknown[];
   current: number;
   setCurrent: (index: number) => void;
   intervalDuration?: number;

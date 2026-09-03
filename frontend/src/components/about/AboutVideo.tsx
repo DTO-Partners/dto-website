@@ -82,7 +82,7 @@ export function AboutVideo({ className = '' }: AboutVideoProps) {
     // Set the new video source
     video.src = currentVideoSource;
     video.load(); // Reload the video with new source
-  }, [i18n.language]); // Watch language directly instead of currentVideoSource
+  }, [currentVideoSource, i18n.language]);
 
   // Effect to handle fallback changes
   useEffect(() => {

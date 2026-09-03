@@ -137,8 +137,8 @@ export class CookieManager {
 
       // Initialize gtag
       window.dataLayer = window.dataLayer || [];
-      window.gtag = function() {
-        window.dataLayer.push(arguments);
+      window.gtag = function(...args: unknown[]) {
+        window.dataLayer.push(args);
       };
       window.gtag('js', new Date());
       window.gtag('config', 'GA_MEASUREMENT_ID', {
@@ -193,8 +193,8 @@ export class CookieManager {
 // Global type declarations
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    dataLayer: unknown[];
+    gtag: (...args: unknown[]) => void;
   }
 }
 
