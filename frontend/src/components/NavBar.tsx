@@ -13,34 +13,34 @@ export default function Navbar() {
     activeSection,
     toggleMobileMenu,
     closeMobileMenu,
-    toggleLanguage,
+    changeLanguage,
     scrollToTop,
   } = useNavbar();
 
   const darkMode = isScrolled || isMobileMenuOpen;
-  const barClass = darkMode
-    ? "ml-auto w-fit max-w-[calc(100vw-2.5rem)] border border-white/[0.05] bg-[#0d0d0c]/30 text-[#f2efe7] shadow-[0_14px_44px_rgba(0,0,0,.12)] backdrop-blur-xl"
-    : "bg-transparent text-white";
+  const surfaceClass = darkMode
+    ? "border-b border-white/[0.06] bg-[#0d0d0c]/72 text-[#f2efe7] shadow-[0_14px_44px_rgba(0,0,0,.12)] backdrop-blur-[18px]"
+    : "border-b border-transparent bg-transparent text-white";
 
   return (
     <motion.nav
       initial={{ y: -18, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed left-0 top-0 z-50 w-full px-5 pt-5 md:px-8 lg:px-12"
+      className={`fixed left-0 top-0 z-[100] w-full transition-all duration-500 ${surfaceClass}`}
       aria-label="Primary navigation"
     >
-      <div className={`relative z-50 mx-auto flex min-h-14 items-start justify-between transition-all duration-500 ${darkMode ? "mt-0 gap-8 px-4 py-2" : "max-w-[1500px] px-0 py-0"} ${barClass}`}>
+      <div className="relative z-50 mx-auto h-20 w-full px-5 md:px-8 lg:h-[84px] lg:px-12 xl:px-[72px]">
         <button
           onClick={scrollToTop}
-          className="min-h-11 whitespace-nowrap text-left focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+          className="absolute left-5 top-1/2 min-h-11 -translate-y-1/2 whitespace-nowrap text-left transition hover:text-[#f2efe7] focus:outline-none focus:ring-2 focus:ring-[#c7954b] md:left-8 lg:left-12 xl:left-[72px]"
           aria-label="DTO Partners home"
         >
           <span className="block text-sm font-semibold uppercase tracking-[0.28em]">DTO Partners</span>
         </button>
 
-        <div className="hidden items-center gap-8 lg:flex">
-          <ul className="flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.2em]">
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+          <ul className="flex items-center gap-10 text-xs font-semibold uppercase tracking-[0.2em] xl:gap-12">
             {navItems.map((item) => (
               <li key={item.id}>
                 <Link
@@ -48,13 +48,13 @@ export default function Navbar() {
                   smooth
                   duration={750}
                   offset={-80}
-                  className={`group relative block cursor-pointer py-3 transition focus:outline-none focus:ring-2 focus:ring-[#c7954b] ${
-                    activeSection === item.id ? "text-[#f2efe7]" : "text-current/72 hover:text-current"
+                  className={`group relative block cursor-pointer py-3 transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#c7954b] ${
+                    activeSection === item.id ? "text-[#f2efe7]" : "text-current/68 hover:-translate-y-px hover:text-current"
                   }`}
                 >
                   {item.label}
                   <span
-                    className={`absolute -bottom-0.5 left-0 h-px bg-[#c7954b] transition-all duration-300 ${
+                    className={`absolute -bottom-0.5 left-1/2 h-px -translate-x-1/2 bg-[#c7954b] transition-all duration-300 ${
                       activeSection === item.id ? "w-full" : "w-0 group-hover:w-full"
                     }`}
                   />
@@ -62,27 +62,30 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-
-          <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.18em]">
-            <LanguageToggle currentLang={currentLang} onToggle={toggleLanguage} isScrolled={darkMode} />
-            <a className="whitespace-nowrap py-3 text-current/72 transition hover:text-current focus:outline-none focus:ring-2 focus:ring-[#c7954b]" href="/login">
-              Log in
-            </a>
-            <Link
-              to="Candidates & Employers"
-              smooth
-              duration={750}
-              offset={-80}
-              className="group inline-flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap py-3 text-[#f2efe7] transition hover:text-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
-            >
-              Register
-              <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
-            </Link>
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <LanguageToggle currentLang={currentLang} onToggle={toggleLanguage} isScrolled={darkMode} />
+        <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 items-center gap-5 text-xs font-semibold uppercase tracking-[0.18em] md:right-8 lg:right-12 lg:flex xl:right-[72px]">
+          <LanguageToggle currentLang={currentLang} onLanguageChange={changeLanguage} isScrolled={darkMode} />
+          <a
+            className="whitespace-nowrap py-3 text-current/70 underline decoration-transparent underline-offset-8 transition hover:text-current hover:decoration-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+            href="/login"
+          >
+            Log in
+          </a>
+          <Link
+            to="Candidates & Employers"
+            smooth
+            duration={750}
+            offset={-80}
+            className="group inline-flex min-h-10 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-[#c7954b] px-4 py-2.5 text-[#0d0d0c] shadow-[0_10px_28px_rgba(199,149,75,.22)] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f2efe7]"
+          >
+            Register
+            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="absolute right-5 top-1/2 flex -translate-y-1/2 items-center gap-3 md:right-8 lg:hidden">
+          <LanguageToggle currentLang={currentLang} onLanguageChange={changeLanguage} isScrolled={darkMode} variant="mobile-inline" />
           <button
             onClick={toggleMobileMenu}
             className="inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] transition hover:text-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
@@ -98,10 +101,10 @@ export default function Navbar() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed inset-0 z-40 bg-[#0d0d0c]/94 px-5 pb-8 pt-28 text-[#f2efe7] backdrop-blur-2xl lg:hidden"
+          className="absolute left-0 top-0 z-40 h-dvh min-h-screen w-screen overflow-y-auto bg-[#0d0d0c] px-5 pb-36 pt-24 text-[#f2efe7] md:px-8 lg:hidden"
         >
-          <div className="flex min-h-full flex-col justify-between">
-            <div className="grid gap-4">
+          <div className="flex min-h-full flex-col justify-start gap-9">
+            <div className="grid gap-2">
             {navItems.map((item) => (
               <Link
                 key={item.id}
@@ -110,7 +113,7 @@ export default function Navbar() {
                 duration={650}
                 offset={-80}
                 onClick={closeMobileMenu}
-                className="block min-h-16 cursor-pointer overflow-hidden text-[clamp(3.4rem,16vw,6.25rem)] font-semibold uppercase leading-[0.86]"
+                className="block cursor-pointer overflow-hidden text-[clamp(2.75rem,13vw,5.25rem)] font-semibold uppercase leading-[0.9]"
               >
                 <motion.span
                   initial={{ y: "110%" }}
@@ -124,23 +127,21 @@ export default function Navbar() {
             ))}
             </div>
             <div className="grid gap-5 text-sm uppercase tracking-[0.18em]">
+              <LanguageToggle currentLang={currentLang} onLanguageChange={changeLanguage} isScrolled={true} variant="mobile-list" />
               <Link
                 to="Candidates & Employers"
                 smooth
                 duration={650}
                 offset={-80}
                 onClick={closeMobileMenu}
-                className="inline-flex min-h-11 cursor-pointer items-center gap-2 py-3 text-3xl font-semibold text-[#c7954b]"
+                className="group inline-flex min-h-12 w-fit cursor-pointer items-center gap-2 rounded-lg bg-[#c7954b] px-4 py-3 text-sm font-semibold text-[#0d0d0c] shadow-[0_12px_30px_rgba(199,149,75,.22)] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f2efe7]"
               >
                 Register
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
               </Link>
-              <a className="min-h-11 py-3" href="/login">
+              <a className="min-h-11 w-fit py-3 text-[#f2efe7]/78 transition hover:text-[#f2efe7] focus:outline-none focus:ring-2 focus:ring-[#c7954b]" href="/login">
                 Log in
               </a>
-              <button onClick={toggleLanguage} className="min-h-11 w-fit py-3 text-left">
-                {currentLang === "en" ? "PL" : "EN"}
-              </button>
             </div>
           </div>
         </motion.div>

@@ -80,7 +80,7 @@ export function MobileMenu({
               <span className="text-white/70 text-sm">Language / Język</span>
               <LanguageToggle 
                 currentLang={currentLang}
-                onToggle={onLanguageToggle}
+                onLanguageChange={onLanguageToggle}
                 isScrolled={true}
               />
             </motion.div>

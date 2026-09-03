@@ -72,7 +72,7 @@ export default function Navbar() {
           {/* Language Toggle */}
           <LanguageToggle 
             currentLang={currentLang}
-            onToggle={toggleLanguage}
+            onLanguageChange={toggleLanguage}
             isScrolled={isScrolled}
           />
 
