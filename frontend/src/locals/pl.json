@@ -419,63 +419,47 @@
     }
   },
   "gdpr": {
-    "floatingButton": {
-      "title": "Zarządzaj Preferencjami Plików Cookie"
-    },
+    "privacyPolicy": "Polityka prywatności",
+    "footerLink": "Ustawienia cookie",
     "banner": {
-      "title": "Preferencje Plików Cookie",
-      "description": "Używamy plików cookie, aby ulepszyć Twoje doświadczenie. Wybierz swoje preferencje lub zaakceptuj wszystkie.",
-      "buttons": {
-        "customize": "Dostosuj",
-        "acceptAll": "Zaakceptuj Wszystkie"
-      }
+      "title": "Cookies",
+      "description": "Używamy niezbędnych plików cookie, aby strona DTO działała. Opcjonalne pliki cookie zapamiętują wybrany język."
     },
-    "modal": {
-      "title": "Preferencje Plików Cookie",
-      "statusText": "{enabled} z {total} kategorii włączonych",
-      "description": "Używamy plików cookie, aby ulepszyć Twoje przeglądanie, dostarczyć spersonalizowane treści i analizować nasz ruch. Wybierz swoje preferencje poniżej lub zaakceptuj wszystkie, aby kontynuować z optymalnym doświadczeniem.",
-      "closeModal": "Zamknij okno",
-      "footerNote": "Możesz zmienić te ustawienia w dowolnym momencie, klikając ikonę pliku cookie.",
-      "buttons": {
-        "rejectAll": "Odrzuć Wszystkie",
-        "savePreferences": "Zapisz Preferencje",
-        "acceptAll": "Zaakceptuj Wszystkie Pliki Cookie"
-      }
+    "panel": {
+      "eyebrow": "Prywatność",
+      "title": "Ustawienia Cookie",
+      "description": "Kontroluj użycie opcjonalnych plików cookie na tej stronie.",
+      "close": "Zamknij ustawienia cookie",
+      "viewDetails": "Pokaż szczegóły"
+    },
+    "buttons": {
+      "rejectOptional": "Odrzuć Opcjonalne",
+      "preferences": "Preferencje",
+      "savePreferences": "Zapisz Preferencje",
+      "acceptAll": "Zaakceptuj Wszystkie"
     },
     "categories": {
-      "necessary": {
-        "title": "Niezbędne Pliki Cookie",
-        "description": "Te pliki cookie są niezbędne do prawidłowego funkcjonowania strony internetowej. Zapewniają podstawową funkcjonalność, funkcje bezpieczeństwa i zapamiętują Twoje preferencje plików cookie. Nie można ich wyłączyć.",
-        "fullDescription": "Niezbędne pliki cookie obejmują zarządzanie sesją, tokeny bezpieczeństwa, równoważenie obciążenia i podstawową funkcjonalność witryny. Bez tych plików cookie usługi, o które prosiłeś, nie mogą być świadczone.",
-        "examples": ["Pliki cookie sesji", "Tokeny bezpieczeństwa", "Równoważenie obciążenia", "Podstawowa funkcjonalność"]
+      "essential": {
+        "title": "Niezbędne",
+        "description": "Wymagane do zapisania wyboru dotyczącego cookie i działania strony. Są zawsze włączone."
       },
       "functional": {
-        "title": "Funkcjonalne Pliki Cookie",
-        "description": "Te pliki cookie umożliwiają rozszerzone funkcjonalności, takie jak zapamiętywanie preferencji językowych, ustawień regionu i dostarczanie spersonalizowanych treści i funkcji.",
-        "fullDescription": "Funkcjonalne pliki cookie zapamiętują wybory, które robisz i zapewniają ulepszone, bardziej osobiste funkcje. Mogą być ustawiane przez nas lub przez dostawców zewnętrznych, których usługi dodaliśmy do naszych stron.",
-        "examples": ["Preferencje językowe", "Ustawienia regionu", "Spersonalizowane treści", "Preferencje interfejsu użytkownika"]
-      },
-      "analytics": {
-        "title": "Analityczne Pliki Cookie",
-        "description": "Te pliki cookie pomagają nam zrozumieć, jak odwiedzający wchodzą w interakcję z naszą stroną internetową, zbierając i raportując informacje anonimowo w celu poprawy naszych usług.",
-        "fullDescription": "Analityczne pliki cookie zbierają informacje o tym, jak korzystasz z naszej strony internetowej, takie jak strony, które odwiedziłeś i linki, na które kliknąłeś. Wszystkie informacje są anonimowe i pomagają nam ulepszyć naszą stronę internetową.",
-        "examples": ["Wyświetlenia stron", "Interakcje użytkowników", "Wydajność witryny", "Źródła ruchu"]
-      },
-      "performance": {
-        "title": "Wydajnościowe Pliki Cookie",
-        "description": "Te pliki cookie pomagają zapewnić, że nasza strona internetowa działa płynnie i wydajnie, monitorując wydajność techniczną i optymalizując czasy ładowania.",
-        "fullDescription": "Wydajnościowe pliki cookie zbierają informacje o tym, jak korzystasz z naszej strony internetowej i pomagają nam optymalizować prędkość witryny, monitorować czas działania i poprawiać ogólne doświadczenie użytkownika.",
-        "examples": ["Monitorowanie prędkości witryny", "Śledzenie błędów", "Optymalizacja wydajności", "Ładowanie zasobów"]
-      },
-      "advertising": {
-        "title": "Marketingowe Pliki Cookie",
-        "description": "Te pliki cookie są używane do dostarczania odpowiednich reklam i śledzenia skuteczności naszych kampanii marketingowych na różnych platformach.",
-        "fullDescription": "Marketingowe pliki cookie śledzą Twoją aktywność online, aby pomóc reklamodawcom dostarczać bardziej odpowiednie reklamy lub ograniczyć liczbę wyświetleń reklamy. Mogą udostępniać te informacje innym organizacjom lub reklamodawcom.",
-        "examples": ["Ukierunkowane reklamy", "Śledzenie kampanii", "Integracja mediów społecznościowych", "Analityka marketingowa"]
+        "title": "Funkcjonalne",
+        "description": "Pozwalają DTO zapamiętać wybrany język przy kolejnych wizytach.",
+        "toggleLabel": "Zezwól na funkcjonalne pliki cookie",
+        "details": {
+          "provider": "DTO Partners",
+          "purpose": "Przechowuje język wybrany w nawigacji strony."
+        }
       }
     },
+    "details": {
+      "provider": "Dostawca",
+      "purpose": "Cel",
+      "storage": "Przechowywanie"
+    },
     "labels": {
-      "required": "Wymagane"
+      "alwaysOn": "Zawsze włączone"
     }
   }
 }

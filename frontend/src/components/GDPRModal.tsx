@@ -1,416 +1,294 @@
-// GDPR Cookie Management Modal with meaningful functionality
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaCookieBite, FaChevronDown, FaShieldAlt, FaChartLine, FaCog, FaBolt, FaEye, FaTimes } from "react-icons/fa";
-import { useGDPR } from "@/hooks/useGDPR";
+import { useEffect, useId, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Check, ChevronDown, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useGDPR } from "@/hooks/useGDPR";
+
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 export default function GDPRModal() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const titleId = useId();
+  const descriptionId = useId();
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const lastActiveElement = useRef<HTMLElement | null>(null);
   const {
-    isVisible,
+    isBannerVisible,
+    isPreferencesOpen,
     preferences,
-    hasConsented,
     updatePreference,
     acceptAll,
-    rejectAll,
+    rejectOptional,
     savePreferences,
-    showModal,
-    hideModal
+    showPreferences,
+    closePreferences,
   } = useGDPR();
 
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isPreferencesOpen) return;
 
-  // Don't show the floating button if user hasn't consented yet (modal will auto-show)
-  const showFloatingButton = hasConsented;
+    lastActiveElement.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
 
-  const handleCategoryToggle = (category: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((item) => item !== category)
-        : [...prev, category]
-    );
-  };
+    const focusDrawer = window.setTimeout(() => {
+      const firstFocusable = drawerRef.current?.querySelector<HTMLElement>(focusableSelector);
+      firstFocusable?.focus();
+    }, 120);
 
-  // Get stats about current preferences
-  const enabledCount = Object.values(preferences).filter(Boolean).length;
-  const totalCount = Object.keys(preferences).length;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePreferences();
+        return;
+      }
 
-  // Get localized status text
-  const getStatusText = () => {
-    if (i18n.language === 'pl') {
-      return `${enabledCount} z ${totalCount} kategorii włączonych`;
-    }
-    return `${enabledCount} of ${totalCount} categories enabled`;
-  };
+      if (event.key !== "Tab" || !drawerRef.current) return;
 
-  const cookieCategories = [
-    {
-      key: "necessary" as const,
-      title: t("gdpr.categories.necessary.title"),
-      description: t("gdpr.categories.necessary.description"),
-      fullDescription: t("gdpr.categories.necessary.fullDescription"),
-      icon: FaShieldAlt,
-      color: "from-green-500 to-emerald-600",
-      required: true,
-      examples: t("gdpr.categories.necessary.examples", { returnObjects: true }) as string[]
-    },
-    {
-      key: "functional" as const,
-      title: t("gdpr.categories.functional.title"),
-      description: t("gdpr.categories.functional.description"),
-      fullDescription: t("gdpr.categories.functional.fullDescription"),
-      icon: FaCog,
-      color: "from-blue-500 to-cyan-600",
-      required: false,
-      examples: t("gdpr.categories.functional.examples", { returnObjects: true }) as string[]
-    },
-    {
-      key: "analytics" as const,
-      title: t("gdpr.categories.analytics.title"),
-      description: t("gdpr.categories.analytics.description"),
-      fullDescription: t("gdpr.categories.analytics.fullDescription"),
-      icon: FaChartLine,
-      color: "from-purple-500 to-violet-600",
-      required: false,
-      examples: t("gdpr.categories.analytics.examples", { returnObjects: true }) as string[]
-    },
-    {
-      key: "performance" as const,
-      title: t("gdpr.categories.performance.title"),
-      description: t("gdpr.categories.performance.description"),
-      fullDescription: t("gdpr.categories.performance.fullDescription"),
-      icon: FaBolt,
-      color: "from-orange-500 to-amber-600",
-      required: false,
-      examples: t("gdpr.categories.performance.examples", { returnObjects: true }) as string[]
-    },
-    {
-      key: "advertising" as const,
-      title: t("gdpr.categories.advertising.title"),
-      description: t("gdpr.categories.advertising.description"),
-      fullDescription: t("gdpr.categories.advertising.fullDescription"),
-      icon: FaEye,
-      color: "from-pink-500 to-rose-600",
-      required: false,
-      examples: t("gdpr.categories.advertising.examples", { returnObjects: true }) as string[]
-    },
-  ];
+      const focusableElements = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>(focusableSelector)
+      ).filter((element) => element.offsetParent !== null);
 
-  // Get status indicator color based on enabled count
-  const getStatusColor = () => {
-    if (enabledCount === totalCount) return 'bg-green-500';
-    if (enabledCount === 1) return 'bg-red-500';
-    return 'bg-yellow-500';
-  };
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusDrawer);
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+      lastActiveElement.current?.focus();
+    };
+  }, [closePreferences, isPreferencesOpen]);
 
   return (
     <>
-      {/* Floating Action Button - Only show if user has consented */}
-      {showFloatingButton && (
-        <motion.button
-          onClick={showModal}
-          className="fixed z-50 bottom-4 left-4 sm:bottom-6 sm:left-6 bg-white text-gray-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)] transition-all duration-300 border border-gray-200 group"
-          title={t("gdpr.floatingButton.title")}
-          whileHover={{ 
-            scale: 1.05,
-            boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)"
-          }}
-          whileTap={{ scale: 0.95 }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 2, duration: 0.5, type: "spring" }}
-        >
-          <motion.div
-            animate={{ rotate: [0, -10, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+      <AnimatePresence>
+        {isBannerVisible && (
+          <motion.section
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 text-[#f4efe6] sm:px-6 sm:pb-6"
+            aria-label={t("gdpr.banner.title")}
           >
-            <FaCookieBite className="text-lg sm:text-xl text-gray-600 group-hover:text-gray-800 transition-colors duration-300" />
-          </motion.div>
-          
-          {/* Status indicator */}
-          <motion.div
-            className={`absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-lg flex items-center justify-center text-xs font-bold text-white ${getStatusColor()}`}
-            animate={{ 
-              scale: [1, 1.2, 1],
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            {enabledCount}
-          </motion.div>
-        </motion.button>
-      )}
+            <div className="mx-auto max-w-[860px] border border-white/[0.08] bg-[#0f0e0c]/94 p-5 shadow-[0_24px_70px_rgba(0,0,0,.38)] backdrop-blur-[16px] sm:rounded-2xl sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#c7954b]">
+                    {t("gdpr.banner.title")}
+                  </p>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[#d8d0c3]">
+                    {t("gdpr.banner.description")}
+                  </p>
+                  <a
+                    href="/privacy-policy"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#f4efe6]/72 transition hover:text-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                  >
+                    {t("gdpr.privacyPolicy")}
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                </div>
 
-      {/* Banner for first-time visitors */}
-      {!hasConsented && !isVisible && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl p-4 sm:p-6"
-        >
-          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 sm:gap-4 w-full lg:w-auto">
-              <FaCookieBite className="text-xl sm:text-2xl text-gray-600 flex-shrink-0" />
-              <div className="flex-1 lg:flex-none">
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{t("gdpr.banner.title")}</h3>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {t("gdpr.banner.description")}
-                </p>
+                <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={rejectOptional}
+                    className="min-h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/72 transition hover:text-[#f4efe6] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                  >
+                    {t("gdpr.buttons.rejectOptional")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showPreferences}
+                    className="min-h-11 whitespace-nowrap border border-white/[0.12] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6] transition hover:border-[#c7954b]/70 hover:text-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                  >
+                    {t("gdpr.buttons.preferences")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={acceptAll}
+                    className="group inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#c7954b] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#0f0e0c] shadow-[0_14px_32px_rgba(199,149,75,.18)] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f4efe6]"
+                  >
+                    {t("gdpr.buttons.acceptAll")}
+                    <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2 sm:gap-3 w-full lg:w-auto">
-              <motion.button
-                onClick={showModal}
-                className="flex-1 lg:flex-none px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {t("gdpr.banner.buttons.customize")}
-              </motion.button>
-              <motion.button
-                onClick={acceptAll}
-                className="flex-1 lg:flex-none px-4 sm:px-6 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {t("gdpr.banner.buttons.acceptAll")}
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      )}
+          </motion.section>
+        )}
+      </AnimatePresence>
 
-      {/* Main Modal */}
       <AnimatePresence>
-        {isVisible && (
-          <motion.div 
+        {isPreferencesOpen && (
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-2 sm:p-4"
-            onClick={(e) => e.target === e.currentTarget && hideModal()}
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-[120] bg-black/58 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closePreferences();
+            }}
           >
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0, y: 50 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 50 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col relative overflow-hidden border border-gray-200"
-              onClick={(e) => e.stopPropagation()}
+            <motion.div
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              aria-describedby={descriptionId}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="ml-auto flex h-full w-full flex-col border-l border-white/[0.08] bg-[#0f0e0c]/96 text-[#f4efe6] shadow-[0_0_80px_rgba(0,0,0,.45)] backdrop-blur-[16px] sm:max-w-[500px]"
             >
-              {/* Header */}
-              <div className="relative flex items-center justify-between border-b border-gray-200 px-4 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-gray-50/20 to-transparent">
-                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                  <motion.div
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0"
-                    whileHover={{ scale: 1.1, rotate: 15 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <FaCookieBite className="text-lg sm:text-xl text-blue-600" />
-                  </motion.div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg sm:text-2xl font-bold text-gray-900 tracking-tight truncate">
-                      {t("gdpr.modal.title")}
+              <header className="border-b border-white/[0.08] px-5 py-5 sm:px-7 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#c7954b]">
+                      {t("gdpr.panel.eyebrow")}
+                    </p>
+                    <h2 id={titleId} className="mt-3 text-2xl font-semibold uppercase tracking-[0.08em]">
+                      {t("gdpr.panel.title")}
                     </h2>
-                    <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
-                      {getStatusText()}
+                    <p id={descriptionId} className="mt-3 text-sm leading-6 text-[#d8d0c3]">
+                      {t("gdpr.panel.description")}
                     </p>
                   </div>
-                </div>
-                <motion.button
-                  onClick={hideModal}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur-sm border-2 border-gray-300 shadow-lg hover:bg-gray-50 hover:shadow-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 ml-2"
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={t("gdpr.modal.closeModal")}
-                >
-                  <FaTimes className="text-sm sm:text-base text-gray-600 group-hover:text-gray-800 transition-colors duration-200" />
-                </motion.button>
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 relative z-10 gdpr-modal-scroll">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.4 }}
-                >
-                  <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 leading-relaxed">
-                    {t("gdpr.modal.description")}
-                  </p>
-
-                  <div className="space-y-4 sm:space-y-6">
-                    {cookieCategories.map((category, index) => {
-                      const IconComponent = category.icon;
-                      const isExpanded = expandedCategories.includes(category.key);
-                      const isEnabled = preferences[category.key];
-                      
-                      return (
-                        <motion.div 
-                          key={category.key}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 + 0.3, duration: 0.4 }}
-                          className="bg-gradient-to-r from-white to-gray-50/50 border-2 border-gray-200 hover:border-gray-400 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group"
-                        >
-                          <button
-                            className="flex justify-between items-center cursor-pointer p-4 sm:p-6 transition-all duration-300 group-hover:bg-gradient-to-r group-hover:from-gray-100/20 group-hover:to-transparent w-full text-left"
-                            onClick={() => handleCategoryToggle(category.key)}
-                            aria-label={`Toggle ${category.title} details`}
-                          >
-                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                              <motion.div
-                                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${category.color} bg-opacity-10 border border-current flex items-center justify-center text-white flex-shrink-0`}
-                                whileHover={{ scale: 1.1, rotate: 10 }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                <IconComponent className="text-base sm:text-lg" />
-                              </motion.div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
-                                  <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-gray-700 transition-colors duration-300 truncate">
-                                    {category.title}
-                                  </h3>
-                                  {category.required && (
-                                    <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-2 py-1 rounded-full border border-gray-300 flex-shrink-0">
-                                      {t("gdpr.labels.required")}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
-                                  {category.description.slice(0, 80)}...
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 ml-2">
-                              {/* Toggle Switch */}
-                              <motion.button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePreference(category.key, !isEnabled);
-                                }}
-                                className={`relative w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-all duration-300 ${
-                                  isEnabled 
-                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30' 
-                                    : 'bg-gray-300 hover:bg-gray-400'
-                                } ${category.required ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'}`}
-                                disabled={category.required}
-                                whileHover={!category.required ? { scale: 1.05 } : {}}
-                                whileTap={!category.required ? { scale: 0.95 } : {}}
-                              >
-                                <motion.div
-                                  className={`absolute top-0.5 sm:top-1 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
-                                    isEnabled ? 'left-7 sm:left-8' : 'left-1'
-                                  }`}
-                                  animate={{ 
-                                    boxShadow: isEnabled 
-                                      ? "0 2px 8px rgba(59, 130, 246, 0.3)" 
-                                      : "0 2px 4px rgba(0, 0, 0, 0.1)"
-                                  }}
-                                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                />
-                                {isEnabled && (
-                                  <motion.div
-                                    className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-blue-600/20"
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                  />
-                                )}
-                              </motion.button>
-                              
-                              {/* Expand Arrow */}
-                              <motion.div
-                                animate={{ rotate: isExpanded ? 180 : 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="text-gray-600 group-hover:text-gray-800 transition-colors duration-300"
-                              >
-                                <FaChevronDown className="text-xs sm:text-sm" />
-                              </motion.div>
-                            </div>
-                          </button>
-                          
-                          {/* Expanded Content */}
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="overflow-hidden"
-                              >
-                                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                                  <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent mb-3 sm:mb-4" />
-                                  <motion.p 
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1, duration: 0.3 }}
-                                    className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium"
-                                  >
-                                    {category.description}
-                                  </motion.p>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* Footer */}
-              <div className="relative border-t border-gray-200 px-4 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-gray-50/10 to-transparent">
-                <motion.div 
-                  className="flex flex-col gap-3 sm:gap-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.4 }}
-                >
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    <motion.button
-                      onClick={rejectAll}
-                      className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 rounded-lg sm:rounded-xl border-2 border-gray-300 hover:border-gray-400 font-semibold transition-all duration-300 hover:shadow-lg hover:from-gray-200 hover:to-gray-300 text-sm sm:text-base"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {t("gdpr.modal.buttons.rejectAll")}
-                    </motion.button>
-                    
-                    <motion.button
-                      onClick={savePreferences}
-                      className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg sm:rounded-xl border-2 border-gray-700 hover:border-gray-600 font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-gray-500/20 text-sm sm:text-base"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {t("gdpr.modal.buttons.savePreferences")}
-                    </motion.button>
-                  </div>
-                  
-                  <motion.button
-                    onClick={acceptAll}
-                    className="w-full px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700 border-2 border-blue-500 hover:border-blue-400 text-sm sm:text-base"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
+                    type="button"
+                    onClick={closePreferences}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-[#f4efe6]/72 transition hover:text-[#c7954b] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                    aria-label={t("gdpr.panel.close")}
                   >
-                    {t("gdpr.modal.buttons.acceptAll")}
-                  </motion.button>
-                </motion.div>
-                
-                <motion.p 
-                  className="text-xs text-gray-500 mt-3 sm:mt-4 text-center font-medium"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.4 }}
-                >
-                  {t("gdpr.modal.footerNote")}
-                </motion.p>
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </div>
+              </header>
+
+              <div className="flex-1 overflow-y-auto px-5 py-2 sm:px-7 gdpr-modal-scroll">
+                <section className="border-b border-white/[0.08] py-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f4efe6]">
+                        {t("gdpr.categories.essential.title")}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-[#bdb3a6]">
+                        {t("gdpr.categories.essential.description")}
+                      </p>
+                    </div>
+                    <span className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md border border-[#c7954b]/30 px-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#c7954b]">
+                      <Check className="h-4 w-4" aria-hidden="true" />
+                      {t("gdpr.labels.alwaysOn")}
+                    </span>
+                  </div>
+                </section>
+
+                <section className="border-b border-white/[0.08] py-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f4efe6]">
+                        {t("gdpr.categories.functional.title")}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-[#bdb3a6]">
+                        {t("gdpr.categories.functional.description")}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updatePreference("functional", !preferences.functional)}
+                      className={`relative h-11 w-[70px] shrink-0 rounded-full border transition focus:outline-none focus:ring-2 focus:ring-[#c7954b] ${
+                        preferences.functional
+                          ? "border-[#c7954b] bg-[#c7954b]"
+                          : "border-white/[0.14] bg-white/[0.05]"
+                      }`}
+                      role="switch"
+                      aria-checked={preferences.functional}
+                      aria-label={t("gdpr.categories.functional.toggleLabel")}
+                    >
+                      <span
+                        className={`absolute top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-[#f4efe6] shadow-[0_8px_20px_rgba(0,0,0,.24)] transition-transform ${
+                          preferences.functional ? "translate-x-[32px]" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <details className="group mt-5">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/68 transition hover:text-[#c7954b]">
+                      {t("gdpr.panel.viewDetails")}
+                      <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                    </summary>
+                    <dl className="mt-3 grid gap-3 border-l border-[#c7954b]/30 pl-4 text-sm text-[#bdb3a6]">
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/54">
+                          {t("gdpr.details.provider")}
+                        </dt>
+                        <dd className="mt-1">{t("gdpr.categories.functional.details.provider")}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/54">
+                          {t("gdpr.details.purpose")}
+                        </dt>
+                        <dd className="mt-1">{t("gdpr.categories.functional.details.purpose")}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/54">
+                          {t("gdpr.details.storage")}
+                        </dt>
+                        <dd className="mt-1">localStorage: dto-language</dd>
+                      </div>
+                    </dl>
+                  </details>
+                </section>
               </div>
+
+              <footer className="border-t border-white/[0.08] px-5 py-5 sm:px-7">
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={rejectOptional}
+                    className="min-h-11 text-xs font-semibold uppercase tracking-[0.16em] text-[#f4efe6]/70 transition hover:text-[#f4efe6] focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                  >
+                    {t("gdpr.buttons.rejectOptional")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={savePreferences}
+                    className="min-h-12 rounded-lg bg-[#f4efe6] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#0f0e0c] transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#c7954b]"
+                  >
+                    {t("gdpr.buttons.savePreferences")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={acceptAll}
+                    className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#c7954b] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#0f0e0c] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f4efe6]"
+                  >
+                    {t("gdpr.buttons.acceptAll")}
+                    <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+                  </button>
+                </div>
+              </footer>
             </motion.div>
           </motion.div>
         )}

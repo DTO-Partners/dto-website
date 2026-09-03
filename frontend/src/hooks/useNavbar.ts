@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CookieManager } from '@/lib/cookieManager';
 
 export interface NavItem {
   label: string;
@@ -124,11 +125,14 @@ export function useNavbar(): UseNavbarReturn {
   };
 
   const toggleLanguage = () => {
-    i18n.changeLanguage(currentLang === "en" ? "pl" : "en");
+    const nextLanguage = currentLang === "en" ? "pl" : "en";
+    i18n.changeLanguage(nextLanguage);
+    CookieManager.saveLanguage(nextLanguage);
   };
 
   const changeLanguage = (language: string) => {
     i18n.changeLanguage(language);
+    CookieManager.saveLanguage(language);
   };
 
   const scrollToTop = () => {

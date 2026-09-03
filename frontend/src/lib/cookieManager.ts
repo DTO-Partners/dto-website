@@ -1,113 +1,107 @@
-// Cookie management service for GDPR compliance
+export const COOKIE_CONSENT_VERSION = 1;
+export const COOKIE_CONSENT_STORAGE_KEY = "dto-cookie-consent";
+const LANGUAGE_STORAGE_KEY = "dto-language";
+
 export interface CookiePreferences {
-  necessary: boolean;
+  essential: true;
   functional: boolean;
-  analytics: boolean;
-  performance: boolean;
-  advertising: boolean;
 }
 
-export interface CookieData {
-  preferences: CookiePreferences;
-  consentDate: string;
-  consentId: string;
+export interface CookieConsent {
+  version: number;
+  essential: true;
+  functional: boolean;
+  consentedAt: string;
+}
+
+export const defaultCookiePreferences: CookiePreferences = {
+  essential: true,
+  functional: false,
+};
+
+function isConsent(value: unknown): value is CookieConsent {
+  if (!value || typeof value !== "object") return false;
+
+  const consent = value as Partial<CookieConsent>;
+
+  return (
+    consent.version === COOKIE_CONSENT_VERSION &&
+    consent.essential === true &&
+    typeof consent.functional === "boolean" &&
+    typeof consent.consentedAt === "string" &&
+    !Number.isNaN(Date.parse(consent.consentedAt))
+  );
+}
+
+function canUseStorage(): boolean {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
 export class CookieManager {
-  private static readonly COOKIE_NAME = 'dto_cookie_preferences';
-  private static readonly COOKIE_EXPIRY_DAYS = 365;
+  static getConsent(): CookieConsent | null {
+    if (!canUseStorage()) return null;
 
-  // Get current cookie preferences
+    try {
+      const rawConsent = window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY);
+      if (!rawConsent) return null;
+
+      const parsedConsent = JSON.parse(rawConsent);
+      return isConsent(parsedConsent) ? parsedConsent : null;
+    } catch (error) {
+      console.error("Error reading cookie consent:", error);
+      return null;
+    }
+  }
+
   static getPreferences(): CookiePreferences | null {
-    try {
-      const cookieData = this.getCookieData();
-      return cookieData?.preferences || null;
-    } catch (error) {
-      console.error('Error reading cookie preferences:', error);
-      return null;
-    }
+    const consent = this.getConsent();
+    if (!consent) return null;
+
+    return {
+      essential: true,
+      functional: consent.functional,
+    };
   }
 
-  // Save cookie preferences
-  static savePreferences(preferences: CookiePreferences): void {
-    try {
-      const cookieData: CookieData = {
-        preferences,
-        consentDate: new Date().toISOString(),
-        consentId: this.generateConsentId()
-      };
-
-      const cookieString = JSON.stringify(cookieData);
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + this.COOKIE_EXPIRY_DAYS);
-
-      document.cookie = `${this.COOKIE_NAME}=${encodeURIComponent(cookieString)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Strict; Secure`;
-      
-      // Apply the preferences immediately
-      this.applyPreferences(preferences);
-      
-      console.log('Cookie preferences saved:', preferences);
-    } catch (error) {
-      console.error('Error saving cookie preferences:', error);
-    }
-  }
-
-  // Check if user has made a choice
   static hasConsent(): boolean {
-    return this.getPreferences() !== null;
+    return this.getConsent() !== null;
   }
 
-  // Get full cookie data
-  static getCookieData(): CookieData | null {
+  static savePreferences(preferences: CookiePreferences): CookieConsent | null {
+    if (!canUseStorage()) return null;
+
+    const consent: CookieConsent = {
+      version: COOKIE_CONSENT_VERSION,
+      essential: true,
+      functional: preferences.functional,
+      consentedAt: new Date().toISOString(),
+    };
+
     try {
-      const cookies = document.cookie.split(';');
-      const targetCookie = cookies.find(cookie => 
-        cookie.trim().startsWith(`${this.COOKIE_NAME}=`)
-      );
-
-      if (!targetCookie) return null;
-
-      const cookieValue = targetCookie.split('=')[1];
-      const decodedValue = decodeURIComponent(cookieValue);
-      return JSON.parse(decodedValue);
+      window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent));
+      this.applyPreferences(preferences);
+      window.dispatchEvent(new CustomEvent("dto-cookie-consent-updated", { detail: consent }));
+      return consent;
     } catch (error) {
-      console.error('Error parsing cookie data:', error);
+      console.error("Error saving cookie consent:", error);
       return null;
     }
   }
 
-  // Apply preferences by enabling/disabling tracking scripts
+  static clearPreferences(): void {
+    if (!canUseStorage()) return;
+
+    window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
+    window.localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent("dto-cookie-consent-updated"));
+  }
+
   static applyPreferences(preferences: CookiePreferences): void {
-    // Analytics (Google Analytics, etc.)
-    if (preferences.analytics) {
-      this.enableGoogleAnalytics();
-    } else {
-      this.disableGoogleAnalytics();
-    }
-
-    // Performance monitoring
-    if (preferences.performance) {
-      this.enablePerformanceMonitoring();
-    } else {
-      this.disablePerformanceMonitoring();
-    }
-
-    // Functional cookies (language preference, theme, etc.)
-    if (preferences.functional) {
-      this.enableFunctionalFeatures();
-    } else {
-      this.disableFunctionalFeatures();
-    }
-
-    // Advertising/Marketing
-    if (preferences.advertising) {
-      this.enableAdvertising();
-    } else {
-      this.disableAdvertising();
+    if (!preferences.functional) {
+      this.clearStoredLanguage();
     }
   }
 
-  // Initialize on page load
   static initialize(): void {
     const preferences = this.getPreferences();
     if (preferences) {
@@ -115,90 +109,38 @@ export class CookieManager {
     }
   }
 
-  // Clear all cookies and reset preferences
-  static clearPreferences(): void {
-    document.cookie = `${this.COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    console.log('Cookie preferences cleared');
+  static canUseFunctionalStorage(): boolean {
+    return this.getConsent()?.functional === true;
   }
 
-  // Generate unique consent ID
-  private static generateConsentId(): string {
-    return `consent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  static getStoredLanguage(): string | null {
+    if (!canUseStorage() || !this.canUseFunctionalStorage()) return null;
+
+    const language = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return language === "pl" || language === "en" ? language : null;
   }
 
-  // Google Analytics management
-  private static enableGoogleAnalytics(): void {
-    if (typeof window !== 'undefined' && !window.gtag) {
-      // Load Google Analytics script
-      const script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID';
-      document.head.appendChild(script);
+  static saveLanguage(language: string): void {
+    if (!canUseStorage() || !this.canUseFunctionalStorage()) return;
 
-      // Initialize gtag
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = function(...args: unknown[]) {
-        window.dataLayer.push(args);
-      };
-      window.gtag('js', new Date());
-      window.gtag('config', 'GA_MEASUREMENT_ID', {
-        anonymize_ip: true,
-        cookie_expires: 63072000 // 2 years
-      });
+    if (language === "pl" || language === "en") {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     }
   }
 
-  private static disableGoogleAnalytics(): void {
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('consent', 'update', {
-        analytics_storage: 'denied'
-      });
-    }
-  }
+  static clearStoredLanguage(): void {
+    if (!canUseStorage()) return;
 
-  // Performance monitoring
-  private static enablePerformanceMonitoring(): void {
-    // Enable performance tracking APIs
-    if ('performance' in window) {
-      // Log performance metrics
-      console.log('Performance monitoring enabled');
-    }
-  }
-
-  private static disablePerformanceMonitoring(): void {
-    console.log('Performance monitoring disabled');
-  }
-
-  // Functional features
-  private static enableFunctionalFeatures(): void {
-    // Save language preferences, theme settings, etc.
-    console.log('Functional features enabled');
-  }
-
-  private static disableFunctionalFeatures(): void {
-    // Remove functional cookies
-    console.log('Functional features disabled');
-  }
-
-  // Advertising
-  private static enableAdvertising(): void {
-    console.log('Advertising cookies enabled');
-  }
-
-  private static disableAdvertising(): void {
-    console.log('Advertising cookies disabled');
+    window.localStorage.removeItem(LANGUAGE_STORAGE_KEY);
   }
 }
 
-// Global type declarations
 declare global {
   interface Window {
-    dataLayer: unknown[];
-    gtag: (...args: unknown[]) => void;
+    resetCookieConsent?: () => void;
   }
 }
 
-// Auto-initialize when module loads
-if (typeof window !== 'undefined') {
-  CookieManager.initialize();
+if (typeof window !== "undefined" && import.meta.env.DEV) {
+  window.resetCookieConsent = () => CookieManager.clearPreferences();
 }

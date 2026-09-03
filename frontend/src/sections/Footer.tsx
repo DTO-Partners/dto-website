@@ -1,4 +1,5 @@
 import { Link } from "react-scroll";
+import { useTranslation } from "react-i18next";
 import { Reveal, RevealDivider } from "@/components/motion/Reveals";
 
 const navItems = [
@@ -9,6 +10,12 @@ const navItems = [
 ];
 
 export default function Footer() {
+  const { t } = useTranslation();
+
+  const openCookieSettings = () => {
+    window.dispatchEvent(new CustomEvent("dto-open-cookie-settings"));
+  };
+
   return (
     <footer id="Contact" className="bg-[#161410] px-5 py-10 text-[#f4efe6] md:px-8 lg:px-12">
       <RevealDivider className="mx-auto h-px max-w-[1500px] bg-white/16" />
@@ -39,6 +46,13 @@ export default function Footer() {
             <a className="transition hover:text-[#c99a57]" href="mailto:candidates@dtopartners.com">candidates@dtopartners.com</a>
             <a className="transition hover:text-[#c99a57]" href="mailto:business@dtopartners.com">business@dtopartners.com</a>
             <a className="transition hover:text-[#c99a57]" href="tel:+48500785691">+48 500 785 691</a>
+            <button
+              type="button"
+              onClick={openCookieSettings}
+              className="w-fit text-left transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]"
+            >
+              {t("gdpr.footerLink")}
+            </button>
           </div>
         </div>
         </Reveal>

@@ -1,136 +1,151 @@
-import { useState, useEffect } from 'react';
-import { CookieManager, CookiePreferences } from '@/lib/cookieManager';
+import { useCallback, useEffect, useState } from "react";
+import {
+  CookieManager,
+  type CookieConsent,
+  type CookiePreferences,
+  defaultCookiePreferences,
+} from "@/lib/cookieManager";
 
 export interface UseGDPRReturn {
-  isVisible: boolean;
+  isBannerVisible: boolean;
+  isPreferencesOpen: boolean;
   preferences: CookiePreferences;
+  consent: CookieConsent | null;
   hasConsented: boolean;
   updatePreference: (key: keyof CookiePreferences, value: boolean) => void;
   acceptAll: () => void;
-  rejectAll: () => void;
+  rejectOptional: () => void;
   savePreferences: () => void;
-  showModal: () => void;
-  hideModal: () => void;
+  showPreferences: () => void;
+  closePreferences: () => void;
   resetConsent: () => void;
 }
 
-const defaultPreferences: CookiePreferences = {
-  necessary: true,
-  functional: false,
-  analytics: false,
-  performance: false,
-  advertising: false,
-};
-
 export function useGDPR(): UseGDPRReturn {
-  const [isVisible, setIsVisible] = useState(false);
-  const [preferences, setPreferences] = useState<CookiePreferences>(defaultPreferences);
-  const [hasConsented, setHasConsented] = useState(false);
+  const [isBannerVisible, setIsBannerVisible] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [preferences, setPreferences] = useState<CookiePreferences>(defaultCookiePreferences);
+  const [consent, setConsent] = useState<CookieConsent | null>(null);
+  const hasConsented = consent !== null;
 
-  // Initialize on mount
-  useEffect(() => {
-    const savedPreferences = CookieManager.getPreferences();
-    const userHasConsented = CookieManager.hasConsent();
-    
-    if (savedPreferences) {
-      setPreferences(savedPreferences);
+  const syncFromStorage = useCallback(() => {
+    const storedConsent = CookieManager.getConsent();
+    setConsent(storedConsent);
+
+    if (storedConsent) {
+      setPreferences({
+        essential: true,
+        functional: storedConsent.functional,
+      });
+      setIsBannerVisible(false);
+      CookieManager.applyPreferences({
+        essential: true,
+        functional: storedConsent.functional,
+      });
+      return;
     }
-    
-    setHasConsented(userHasConsented);
-    
-    // Show modal automatically if no consent given and not during development
-    if (!userHasConsented) {
-      // Delay to let page load first
-      setTimeout(() => setIsVisible(true), 2000);
+
+    setPreferences(defaultCookiePreferences);
+    setIsBannerVisible(true);
+  }, []);
+
+  const closePreferences = useCallback(() => {
+    setIsPreferencesOpen(false);
+    if (!CookieManager.hasConsent()) {
+      setIsBannerVisible(true);
     }
   }, []);
 
+  useEffect(() => {
+    syncFromStorage();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "dto-cookie-consent") {
+        syncFromStorage();
+      }
+    };
+
+    const handleConsentUpdate = () => syncFromStorage();
+    const handleOpenPreferences = () => {
+      syncFromStorage();
+      setIsBannerVisible(false);
+      setIsPreferencesOpen(true);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("dto-cookie-consent-updated", handleConsentUpdate);
+    window.addEventListener("dto-open-cookie-settings", handleOpenPreferences);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("dto-cookie-consent-updated", handleConsentUpdate);
+      window.removeEventListener("dto-open-cookie-settings", handleOpenPreferences);
+    };
+  }, [syncFromStorage]);
+
+  const persistConsent = useCallback((nextPreferences: CookiePreferences) => {
+    const savedConsent = CookieManager.savePreferences(nextPreferences);
+    setPreferences(nextPreferences);
+    setConsent(savedConsent);
+    setIsBannerVisible(false);
+    setIsPreferencesOpen(false);
+  }, []);
+
   const updatePreference = (key: keyof CookiePreferences, value: boolean) => {
-    if (key === 'necessary') return; // Necessary cookies cannot be disabled
-    
-    setPreferences(prev => ({
-      ...prev,
-      [key]: value
+    if (key === "essential") return;
+
+    setPreferences((currentPreferences) => ({
+      ...currentPreferences,
+      [key]: value,
     }));
   };
 
   const acceptAll = () => {
-    const allAccepted: CookiePreferences = {
-      necessary: true,
+    persistConsent({
+      essential: true,
       functional: true,
-      analytics: true,
-      performance: true,
-      advertising: true,
-    };
-    
-    setPreferences(allAccepted);
-    CookieManager.savePreferences(allAccepted);
-    setHasConsented(true);
-    setIsVisible(false);
-    
-    // Trigger analytics event
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'cookie_consent', {
-        event_category: 'engagement',
-        event_label: 'accept_all'
-      });
-    }
+    });
   };
 
-  const rejectAll = () => {
-    const onlyNecessary: CookiePreferences = {
-      necessary: true,
+  const rejectOptional = () => {
+    persistConsent({
+      essential: true,
       functional: false,
-      analytics: false,
-      performance: false,
-      advertising: false,
-    };
-    
-    setPreferences(onlyNecessary);
-    CookieManager.savePreferences(onlyNecessary);
-    setHasConsented(true);
-    setIsVisible(false);
+    });
   };
 
   const savePreferences = () => {
-    CookieManager.savePreferences(preferences);
-    setHasConsented(true);
-    setIsVisible(false);
-    
-    // Trigger analytics event if analytics are enabled
-    if (preferences.analytics && typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'cookie_consent', {
-        event_category: 'engagement',
-        event_label: 'custom_preferences'
-      });
-    }
+    persistConsent({
+      essential: true,
+      functional: preferences.functional,
+    });
   };
 
-  const showModal = () => {
-    setIsVisible(true);
-  };
-
-  const hideModal = () => {
-    setIsVisible(false);
+  const showPreferences = () => {
+    setIsBannerVisible(false);
+    setIsPreferencesOpen(true);
   };
 
   const resetConsent = () => {
     CookieManager.clearPreferences();
-    setPreferences(defaultPreferences);
-    setHasConsented(false);
-    setIsVisible(true);
+    setConsent(null);
+    setPreferences(defaultCookiePreferences);
+    setIsPreferencesOpen(true);
+    setIsBannerVisible(false);
   };
 
   return {
-    isVisible,
+    isBannerVisible,
+    isPreferencesOpen,
     preferences,
+    consent,
     hasConsented,
     updatePreference,
     acceptAll,
-    rejectAll,
+    rejectOptional,
     savePreferences,
-    showModal,
-    hideModal,
+    showPreferences,
+    closePreferences,
     resetConsent,
   };
 }

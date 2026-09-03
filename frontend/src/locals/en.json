@@ -419,63 +419,47 @@
     }
   },
   "gdpr": {
-    "floatingButton": {
-      "title": "Manage Cookie Preferences"
-    },
+    "privacyPolicy": "Privacy Policy",
+    "footerLink": "Cookie settings",
     "banner": {
-      "title": "Cookie Preferences",
-      "description": "We use cookies to enhance your experience. Choose your preferences or accept all.",
-      "buttons": {
-        "customize": "Customize",
-        "acceptAll": "Accept All"
-      }
+      "title": "Cookies",
+      "description": "We use essential cookies to keep DTO working. Optional cookies remember your language preference."
     },
-    "modal": {
-      "title": "Cookie Preferences",
-      "statusText": "{enabled} of {total} categories enabled",
-      "description": "We use cookies to enhance your browsing experience, provide personalized content, and analyze our traffic. Choose your preferences below or accept all to continue with the optimal experience.",
-      "closeModal": "Close modal",
-      "footerNote": "You can change these settings at any time by clicking the cookie icon.",
-      "buttons": {
-        "rejectAll": "Reject All",
-        "savePreferences": "Save Preferences",
-        "acceptAll": "Accept All Cookies"
-      }
+    "panel": {
+      "eyebrow": "Privacy",
+      "title": "Cookie Settings",
+      "description": "Control how optional cookies are used on this site.",
+      "close": "Close cookie settings",
+      "viewDetails": "View details"
+    },
+    "buttons": {
+      "rejectOptional": "Reject Optional",
+      "preferences": "Preferences",
+      "savePreferences": "Save Preferences",
+      "acceptAll": "Accept All"
     },
     "categories": {
-      "necessary": {
-        "title": "Essential Cookies",
-        "description": "These cookies are essential for the website to function properly. They ensure basic functionality, security features, and remember your cookie preferences. They cannot be disabled.",
-        "fullDescription": "Essential cookies include session management, security tokens, load balancing, and basic site functionality. Without these cookies, services you have asked for cannot be provided.",
-        "examples": ["Session cookies", "Security tokens", "Load balancing", "Basic functionality"]
+      "essential": {
+        "title": "Essential",
+        "description": "Required to save your cookie choice and keep the site working. These are always on."
       },
       "functional": {
-        "title": "Functional Cookies",
-        "description": "These cookies enable enhanced functionality like remembering your language preferences, region settings, and providing personalized content and features.",
-        "fullDescription": "Functional cookies remember choices you make and provide enhanced, more personal features. They may be set by us or by third party providers whose services we have added to our pages.",
-        "examples": ["Language preferences", "Region settings", "Customized content", "User interface preferences"]
-      },
-      "analytics": {
-        "title": "Analytics Cookies",
-        "description": "These cookies help us understand how visitors interact with our website by collecting and reporting information anonymously to improve our services.",
-        "fullDescription": "Analytics cookies collect information about how you use our website, such as which pages you visited and which links you clicked on. All information is anonymous and helps us improve our website.",
-        "examples": ["Page views", "User interactions", "Site performance", "Traffic sources"]
-      },
-      "performance": {
-        "title": "Performance Cookies",
-        "description": "These cookies help ensure our website runs smoothly and efficiently by monitoring technical performance and optimizing loading times.",
-        "fullDescription": "Performance cookies collect information about how you use our website and help us optimize site speed, monitor uptime, and improve overall user experience.",
-        "examples": ["Site speed monitoring", "Error tracking", "Performance optimization", "Resource loading"]
-      },
-      "advertising": {
-        "title": "Marketing Cookies",
-        "description": "These cookies are used to deliver relevant advertisements and track the effectiveness of our marketing campaigns across different platforms.",
-        "fullDescription": "Marketing cookies track your online activity to help advertisers deliver more relevant advertising or to limit how many times you see an ad. They may share this information with other organizations or advertisers.",
-        "examples": ["Targeted advertising", "Campaign tracking", "Social media integration", "Marketing analytics"]
+        "title": "Functional",
+        "description": "Allows DTO to remember your selected language on future visits.",
+        "toggleLabel": "Allow functional cookies",
+        "details": {
+          "provider": "DTO Partners",
+          "purpose": "Stores the language selected in the site navigation."
+        }
       }
     },
+    "details": {
+      "provider": "Provider",
+      "purpose": "Purpose",
+      "storage": "Storage"
+    },
     "labels": {
-      "required": "Required"
+      "alwaysOn": "Always on"
     }
   }
 }

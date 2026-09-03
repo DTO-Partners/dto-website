@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import en from "@locals/en.json";
 import pl from "@locals/pl.json";
+import { CookieManager } from "./cookieManager";
 
 i18n
   .use(LanguageDetector)
@@ -13,6 +14,11 @@ i18n
       pl: { translation: pl },
     },
     fallbackLng: "en",
+    lng: CookieManager.getStoredLanguage() ?? undefined,
+    detection: {
+      order: ["querystring", "navigator"],
+      caches: [],
+    },
     interpolation: {
       escapeValue: false,
     },
