@@ -19,6 +19,7 @@ export interface UseNavbarReturn {
   toggleMobileMenu: () => void;
   closeMobileMenu: () => void;
   toggleLanguage: () => void;
+  changeLanguage: (language: string) => void;
   scrollToTop: () => void;
 }
 
@@ -126,6 +127,10 @@ export function useNavbar(): UseNavbarReturn {
     i18n.changeLanguage(currentLang === "en" ? "pl" : "en");
   };
 
+  const changeLanguage = (language: string) => {
+    i18n.changeLanguage(language);
+  };
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -141,6 +146,7 @@ export function useNavbar(): UseNavbarReturn {
     toggleMobileMenu,
     closeMobileMenu,
     toggleLanguage,
+    changeLanguage,
     scrollToTop
   };
 }

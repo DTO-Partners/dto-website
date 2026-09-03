@@ -290,43 +290,46 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   const cursorCountry = hoveredCountry ? data.find((item) => item.country === hoveredCountry)?.name : null;
 
   return (
-    <div className="relative min-h-[68svh] overflow-hidden lg:min-h-[76svh]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_58%_50%,rgba(199,149,75,.14),transparent_26%),radial-gradient(circle_at_78%_62%,rgba(242,239,231,.06),transparent_22%)]" />
+    <div className="relative min-h-[70svh] overflow-hidden lg:min-h-[78svh]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_58%_50%,rgba(199,149,75,.18),transparent_30%),radial-gradient(circle_at_78%_62%,rgba(242,239,231,.075),transparent_22%)]" />
 
-      <div className="relative z-20 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="-mx-5 flex gap-7 overflow-x-auto px-5 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#f2efe7]/48 md:mx-0 md:px-0">
+      <div className="absolute right-0 top-0 z-30 grid justify-items-end gap-3 text-right">
+        <span className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-[#c99a57]">Region</span>
+        <div className="-mr-2 flex max-w-[calc(100vw-2.5rem)] gap-5 overflow-x-auto px-2 pb-1 text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-[#f2efe7]/48">
           {(["all", "europe", "middle-east"] as Region[]).map((region) => (
             <button
               type="button"
               key={region}
               onClick={() => setRegion(region)}
-              className={`relative min-h-11 shrink-0 transition focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70 ${
+              className={`relative inline-flex min-h-11 shrink-0 items-center gap-2 transition focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70 ${
                 filterRegion === region ? "text-[#f2efe7]" : "hover:text-[#f2efe7]/78"
               }`}
             >
+              <span className={`h-1.5 w-1.5 rounded-full transition ${filterRegion === region ? "bg-[#c99a57]" : "bg-[#f2efe7]/18"}`} />
               {labels[region]}
-              <span className={`absolute -bottom-1 left-0 h-px bg-[#c99a57] transition-all duration-300 ${filterRegion === region ? "w-full" : "w-0"}`} />
+              <span className={`absolute bottom-1 left-3 h-px bg-[#c99a57] transition-all duration-300 ${filterRegion === region ? "w-[calc(100%-0.75rem)]" : "w-0"}`} />
             </button>
           ))}
         </div>
-
-        <div className="flex items-center gap-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/62">
-          <button type="button" onClick={() => setZoomLevel((value) => Math.min(value + 0.3, 4))} className="grid min-h-10 min-w-10 place-items-center border border-white/8 bg-white/[0.03] transition hover:border-[#c99a57]/40 hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomIn")}>
-            <Plus className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => setZoomLevel((value) => Math.max(value - 0.3, 0.9))} className="grid min-h-10 min-w-10 place-items-center border border-white/8 bg-white/[0.03] transition hover:border-[#c99a57]/40 hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomOut")}>
-            <Minus className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => setRegion("all")} className="min-h-10 border border-white/8 bg-white/[0.03] px-3 transition hover:border-[#c99a57]/40 hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.resetView")}>
-            {labels.reset}
-          </button>
-          <button type="button" onClick={runTour} className="grid min-h-10 min-w-10 place-items-center border border-white/8 bg-white/[0.03] transition hover:border-[#c99a57]/40 hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.highlightTour")}>
-            <Sparkles className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
-      <div className="relative mt-5 min-h-[520px] md:min-h-[600px] lg:mt-0 lg:min-h-[650px]">
+      <div className="absolute bottom-3 right-0 z-30 flex items-center gap-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/58 md:bottom-5">
+          <button type="button" onClick={() => setZoomLevel((value) => Math.min(value + 0.3, 4))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomIn")}>
+            <Plus className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setZoomLevel((value) => Math.max(value - 0.3, 0.9))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomOut")}>
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="mx-1 h-4 w-px bg-white/14" />
+          <button type="button" onClick={() => setRegion("all")} className="min-h-10 px-2 transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.resetView")}>
+            {labels.reset}
+          </button>
+          <button type="button" onClick={runTour} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.highlightTour")}>
+            <Sparkles className="h-4 w-4" />
+          </button>
+      </div>
+
+      <div className="relative min-h-[560px] pt-12 md:min-h-[640px] lg:min-h-[700px] lg:pt-0">
         <div
           className={`network-map-area absolute inset-0 overflow-hidden ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
           onClick={(event) => {
@@ -354,7 +357,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
               transition: isDragging || reduced ? "none" : "transform 520ms cubic-bezier(.22,1,.36,1)",
             }}
           >
-            <div className="absolute inset-0 flex items-center justify-center opacity-90">
+            <div className="absolute inset-0 flex items-center justify-center opacity-100">
               <WorldMap
                 title=""
                 valueSuffix=""
@@ -382,17 +385,17 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
                   const isAnimated = animatedCountries.has(currentCountry);
 
                   if (!isVisibleContext) {
-                    return { fill: "#131211", stroke: "#1f1d1a", strokeWidth: 0.35, opacity: 0.3, pointerEvents: "none" };
+                    return { fill: "#151411", stroke: "#29241e", strokeWidth: 0.4, opacity: 0.36, pointerEvents: "none" };
                   }
 
                   return {
-                    fill: country ? (isSelected || isHovered || isAnimated ? "#c99a57" : country.color) : "#1c1a17",
-                    stroke: country ? "rgba(242,239,231,.28)" : "#28241f",
-                    strokeWidth: country && (isSelected || isHovered || isAnimated) ? 1.4 : 0.55,
+                    fill: country ? (isSelected || isHovered || isAnimated ? "#d8b36f" : country.color) : "#25211c",
+                    stroke: country ? "rgba(242,239,231,.42)" : "#3a332b",
+                    strokeWidth: country && (isSelected || isHovered || isAnimated) ? 1.45 : 0.65,
                     cursor: country ? "pointer" : "default",
-                    opacity: country ? (isRegionActive ? (selectedCode && !isSelected ? 0.46 : 0.9) : 0.16) : isRegionActive ? 0.44 : 0.16,
+                    opacity: country ? (isRegionActive ? (selectedCode && !isSelected ? 0.54 : 1) : 0.2) : isRegionActive ? 0.58 : 0.2,
                     transition: "fill 180ms ease, opacity 240ms ease, stroke-width 180ms ease",
-                    filter: isSelected || isAnimated ? "drop-shadow(0 0 5px rgba(201,154,87,.34))" : "none",
+                    filter: isSelected || isAnimated ? "drop-shadow(0 0 7px rgba(201,154,87,.42))" : "none",
                   };
                 }}
               />
@@ -445,7 +448,9 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
                   <motion.div
                     initial={reduced ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: isDimmed ? 0.18 : isNodeActive || node.country === "pl" || node.country === "ae" ? 1 : 0.55, y: 0 }}
-                    className={`pointer-events-none absolute top-0 min-w-28 text-[0.52rem] font-semibold uppercase leading-relaxed tracking-[0.2em] text-[#d2ad6b] ${node.labelOffset}`}
+                    className={`pointer-events-none absolute top-0 min-w-28 text-[0.52rem] font-semibold uppercase leading-relaxed tracking-[0.2em] text-[#d2ad6b] ${
+                      node.country === "ae" ? "max-sm:-translate-x-[96%] max-sm:-translate-y-[118%] max-sm:text-right" : ""
+                    } ${node.labelOffset}`}
                   >
                     <span className="block">{country.name}</span>
                     <span className="block text-[#f2efe7]/42">{getRegion(node.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope} · {country.established}</span>
@@ -455,12 +460,12 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
             })}
           </div>
 
-          {isFinePointer && isCursorVisible && (
+          {isFinePointer && isCursorVisible && (isDragging || cursorCountry) && (
             <div
-              className="pointer-events-none absolute z-50 hidden border border-[#c99a57]/25 bg-[#0d0d0c]/80 px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/76 backdrop-blur-md lg:block"
+              className="pointer-events-none absolute z-50 hidden px-2 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/76 lg:block"
               style={{ left: cursorPosition.x + 14, top: cursorPosition.y + 14 }}
             >
-              {isDragging ? labels.exploring : cursorCountry ? `${labels.view} ${cursorCountry} ↗` : labels.drag}
+              {isDragging ? labels.exploring : `${labels.view} ${cursorCountry} ↗`}
             </div>
           )}
         </div>
@@ -474,7 +479,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
               animate="visible"
               exit="exit"
               transition={{ duration: reduced ? 0.01 : 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="relative z-30 mt-[540px] border border-white/10 bg-[#14120f]/88 p-5 text-[#f2efe7] shadow-[0_28px_90px_rgba(0,0,0,.34)] backdrop-blur-2xl md:mt-[640px] md:max-w-[390px] lg:absolute lg:bottom-8 lg:right-0 lg:mt-0"
+              className="relative z-30 mt-[560px] max-w-[330px] border-l border-[#c99a57]/42 bg-[#0d0d0c]/72 py-4 pl-5 pr-4 text-[#f2efe7] shadow-[0_24px_80px_rgba(0,0,0,.26)] backdrop-blur-xl md:mt-[660px] lg:absolute lg:bottom-20 lg:left-0 lg:mt-0"
             >
               <div className="flex items-start justify-between gap-5">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#c99a57]">
@@ -489,19 +494,20 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
                   initial={reduced ? false : { y: "110%" }}
                   animate={{ y: 0 }}
                   transition={{ duration: reduced ? 0.01 : 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-4xl font-semibold uppercase leading-none"
+                  className="text-[clamp(2.2rem,4vw,3.2rem)] font-semibold uppercase leading-none"
                 >
                   {selectedCountry.name}
                 </motion.h3>
               </div>
               <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0.01 : 0.45, delay: 0.16 }}>
-                <p className="mt-4 text-sm leading-relaxed text-[#d7cec0]">{selectedCountry.description}</p>
-                <p className="mt-5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/54">
+                <p className="mt-4 text-xs leading-relaxed text-[#d7cec0]/78">{selectedCountry.description}</p>
+                <p className="mt-5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/54">
                   Partnership · {selectedCountry.established}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {selectedCountry.industries.map((industry) => (
-                    <span key={industry} className="border border-white/8 bg-white/[0.04] px-3 py-2 text-xs text-[#f2efe7]/76">
+                <div className="mt-5 grid gap-2">
+                  {selectedCountry.industries.map((industry, index) => (
+                    <span key={industry} className="grid grid-cols-[1.6rem_1fr] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#f2efe7]/72">
+                      <span className="font-mono text-[#c99a57]/78">{String(index + 1).padStart(2, "0")}</span>
                       {industry}
                     </span>
                   ))}
