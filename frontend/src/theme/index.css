@@ -23,6 +23,73 @@
     background: transparent !important;
   }
 
+  .about-regional-map svg {
+    max-width: none;
+    transform: translate3d(19%, 9%, 0) scale(2.18);
+    transform-origin: center;
+  }
+
+  .about-regional-map text {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .about-regional-map svg {
+      transform: translate3d(33%, 18%, 0) scale(2.65);
+    }
+  }
+
+  .testimonial-row-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent);
+  }
+
+  .testimonial-row-track {
+    animation: testimonial-row-left 40s linear infinite;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+
+  .testimonial-row-track--reverse {
+    animation-name: testimonial-row-right;
+    animation-duration: 46s;
+  }
+
+  .testimonial-row-mask:hover .testimonial-row-track,
+  .testimonial-row-mask:focus-within .testimonial-row-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .testimonial-row-mask {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+
+    .testimonial-row-track {
+      animation: none;
+      transform: none;
+    }
+  }
+
+  @keyframes testimonial-row-left {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(calc(-50% - 0.75rem), 0, 0);
+    }
+  }
+
+  @keyframes testimonial-row-right {
+    from {
+      transform: translate3d(calc(-50% - 0.75rem), 0, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
 }
 
 @layer components {
