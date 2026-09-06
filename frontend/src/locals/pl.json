@@ -377,6 +377,18 @@
       "partnershipActive": "Partnerstwo Aktywne",
       "exploreOpportunities": "Kliknij, aby poznać możliwości partnerstwa"
     },
+    "accessibility": {
+      "viewCountry": "Zobacz usługi DTO w kraju: {{country}}"
+    },
+    "panel": {
+      "ariaLabel": "Informacje o sieci DTO dla kraju: {{country}}",
+      "dtoInCountry": "DTO w kraju: {{country}}",
+      "whatWeDo": "Co robimy",
+      "sectors": "Sektory",
+      "network": "Sieć",
+      "partnershipEstablished": "Partnerstwo nawiązane",
+      "cta": "Omów rekrutację"
+    },
     "modal": {
       "partnershipOverview": "Przegląd Partnerstwa",
       "keyIndustrySectors": "Kluczowe Sektory Branżowe",
