@@ -37,8 +37,8 @@ function getTitleLines(key: IndustryKey, title: string) {
   }
 
   if (key === "itCybersecurity") {
-    if (title.includes("CYBERBEZPIECZEŃSTWO")) return ["IT I", "CYBER", "BEZPIECZEŃSTWO"];
-    return ["IT &", "CYBER", "SECURITY"];
+    if (title.includes("CYBERBEZPIECZEŃSTWO")) return ["IT I", "CYBERBEZPIECZEŃSTWO"];
+    return ["IT &", "CYBERSECURITY"];
   }
 
   return [title];
@@ -71,18 +71,18 @@ function ChapterText({
   const titleY = useTransform(progress, [range.enterStart, range.enterEnd, range.exitStart, range.exitEnd], ["118%", "0%", "0%", "-110%"]);
 
   return (
-    <motion.div style={{ opacity, y, scale }} className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+    <motion.div style={{ opacity, y, scale }} className="absolute inset-x-0 top-1/2 min-w-0 -translate-y-1/2">
       <p className="mb-5 text-xs font-semibold uppercase tracking-[0.28em] text-[#c7954b]">
         {String(index + 1).padStart(2, "0")} / EXPERTISE
       </p>
       <p className="mb-8 max-w-[32rem] text-[clamp(1.05rem,1.7vw,1.65rem)] leading-snug text-[#d8d0c2]/78">{item.subtitle}</p>
-      <h2 className="max-w-[88vw] text-[clamp(4.7rem,8.2vw,10.8rem)] font-semibold uppercase leading-[0.82] tracking-normal">
+      <h2 className="max-w-full text-[clamp(4.15rem,17cqw,9.4rem)] font-semibold uppercase leading-[0.88] tracking-normal [overflow-wrap:anywhere] xl:text-[clamp(4.7rem,16cqw,10.2rem)]">
         {item.lines.map((line, lineIndex) => (
-          <span key={`${item.key}-${line}`} className="block overflow-hidden pb-[0.035em]">
+          <span key={`${item.key}-${line}`} className="block overflow-x-visible overflow-y-hidden py-[0.045em]">
             <motion.span
               style={{ y: titleY }}
               transition={{ duration: 0.6, delay: lineIndex * 0.05, ease }}
-              className="block [text-wrap:balance]"
+              className="block max-w-full [text-wrap:balance]"
             >
               {line}
             </motion.span>
@@ -157,39 +157,39 @@ export default function Values() {
     <section ref={sectionRef} id="Industries" className="relative bg-[#0d0d0c] text-[#f2efe7] lg:h-[420svh] motion-reduce:lg:h-auto">
       <motion.div
         style={{ opacity: exitOpacity }}
-        className="sticky top-0 hidden min-h-svh overflow-hidden lg:grid lg:grid-cols-[minmax(0,58vw)_minmax(24rem,42vw)] motion-reduce:lg:hidden"
+        className="sticky top-0 hidden min-h-svh overflow-hidden lg:grid lg:grid-cols-[minmax(0,58vw)_minmax(22rem,42vw)] xl:grid-cols-[minmax(0,60vw)_minmax(24rem,40vw)] motion-reduce:lg:hidden"
       >
         <motion.div
           style={{ x: glowX }}
           className="pointer-events-none absolute top-[8%] z-10 h-[36rem] w-[36rem] rounded-full bg-[#c7954b]/12 blur-[120px]"
         />
 
-        <div className="relative z-20 flex min-h-svh flex-col justify-end px-[clamp(3rem,5vw,6.5rem)] py-[clamp(4rem,7vw,7.5rem)]">
+        <div className="relative z-20 flex min-h-svh min-w-0 flex-col justify-end px-[clamp(2.5rem,4.4vw,6.5rem)] py-[clamp(4rem,7vw,7.5rem)] [container-type:inline-size]">
           <div className="absolute left-[clamp(3rem,5vw,6.5rem)] top-[clamp(4.5rem,8vw,8rem)] flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.28em] text-[#c7954b]/86">
             <span className="h-px w-16 bg-[#c7954b]/50" />
             <span>Scroll to explore</span>
             <ArrowDown className="h-3.5 w-3.5" strokeWidth={1.8} />
           </div>
 
-          <div className="relative h-[58svh] min-h-[32rem] max-w-[72rem]">
+          <div className="relative h-[58svh] min-h-[32rem] max-w-full">
             {items.map((item, index) => (
               <ChapterText key={item.key} item={item} index={index} progress={scrollYProgress} />
             ))}
           </div>
 
-          <div className="relative z-30 mb-1 grid max-w-[48rem] grid-cols-3 gap-x-8 gap-y-3 border-t border-[#c7954b]/22 pt-6">
+          <div className="relative z-30 mb-1 grid max-w-[48rem] grid-cols-[repeat(3,minmax(0,1fr))] gap-x-6 gap-y-3 border-t border-[#c7954b]/22 pt-6">
             {active.services.map((service, index) => (
               <motion.div
                 key={`${active.key}-${service}`}
                 initial={reduced ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: reduced ? 0.01 : 0.34, delay: index * 0.075, ease }}
-                className="grid grid-cols-[2.2rem_1fr] items-start gap-3 text-sm leading-snug text-[#d8d0c2]/76"
+                className="grid min-w-0 grid-cols-[2.2rem_minmax(0,1fr)] items-start gap-3 text-sm leading-snug text-[#d8d0c2]/76"
               >
                 <span className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-[#c7954b]/78">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <span>{service}</span>
+                <span className="min-w-0 break-words">{service}</span>
               </motion.div>
             ))}
           </div>
@@ -209,9 +209,9 @@ export default function Values() {
           <div className="absolute bottom-12 left-10 right-10">
             <div className="mb-10 grid gap-4">
               {items.map((item, index) => (
-                <div key={item.key} className="grid grid-cols-[5.5rem_1fr] items-center gap-4" aria-hidden="true">
+                <div key={item.key} className="grid min-w-0 grid-cols-[minmax(4.6rem,5.5rem)_minmax(0,1fr)] items-center gap-4" aria-hidden="true">
                   <span
-                    className={`text-xs font-semibold uppercase tracking-[0.22em] transition-colors duration-500 ${
+                    className={`min-w-0 break-words text-xs font-semibold uppercase tracking-[0.16em] transition-colors duration-500 ${
                       index === activeIndex ? "text-[#c7954b]" : "text-white/28"
                     }`}
                   >
@@ -244,8 +244,12 @@ export default function Values() {
                 {String(index + 1).padStart(2, "0")} / EXPERTISE
               </p>
               <p className="mb-4 max-w-sm text-lg leading-snug text-[#d8d0c2]/82">{item.subtitle}</p>
-              <h2 className="mb-7 text-[clamp(3.2rem,15vw,6.3rem)] font-semibold uppercase leading-[0.86] tracking-normal [overflow-wrap:anywhere]">
-                {item.title}
+              <h2 className="mb-7 max-w-full text-[clamp(3rem,14.5vw,5.8rem)] font-semibold uppercase leading-[0.9] tracking-normal [overflow-wrap:anywhere]">
+                {item.lines.map((line) => (
+                  <span key={`${item.key}-mobile-${line}`} className="block max-w-full">
+                    {line}
+                  </span>
+                ))}
               </h2>
               <div className="grid gap-3 border-t border-[#c7954b]/28 pt-5">
                 {item.services.map((service, serviceIndex) => (

@@ -2,11 +2,31 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Minus, Plus, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { geoCentroid, geoInterpolate, geoMercator, geoPath } from "d3-geo";
+import countriesGeo from "react-svg-worldmap/dist/countries.geo.js";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-scroll";
-import { WorldMap } from "react-svg-worldmap";
 
 type Region = "all" | "europe" | "middle-east";
+type LabelAnchor = "top" | "top-right" | "right" | "bottom-right" | "bottom" | "bottom-left" | "left" | "top-left";
+
+type CountryGeometry = {
+  N: string;
+  I: string;
+  C: number[][][][];
+};
+
+type GeoFeature = {
+  type: "Feature";
+  properties: {
+    name: string;
+    iso2: string;
+  };
+  geometry: {
+    type: "MultiPolygon";
+    coordinates: number[][][][];
+  };
+};
 
 type CountryData = {
   country: string;
@@ -22,13 +42,28 @@ type CountryData = {
   }[];
 };
 
-type NetworkNode = {
-  country: string;
-  region: Region;
+type NetworkLocation = {
+  countryCode: string;
+  region: Exclude<Region, "all">;
+  locationType: "country";
+  labelAnchor: LabelAnchor;
+};
+
+type ProjectedLocation = NetworkLocation & {
+  country: CountryData;
+  coordinates: [number, number];
   x: number;
   y: number;
-  labelOffset: string;
 };
+
+type CameraState = {
+  userZoom: number;
+};
+
+const width = 1200;
+const height = 720;
+const minUserZoom = 1;
+const maxUserZoom = 1.72;
 
 const visibleCountries = [
   "pl",
@@ -97,27 +132,25 @@ const visibleCountries = [
   "tj",
   "af",
   "pk",
+  "eg",
+  "sd",
+  "er",
+  "et",
+  "so",
 ];
 
 const europe = ["at", "be", "bg", "hr", "cy", "cz", "dk", "ee", "es", "fi", "fr", "gr", "hu", "it", "lt", "lv", "mt", "ro", "se", "si", "sk", "ch", "no", "is", "rs", "me", "mk", "ba", "al", "md", "ua", "by", "gb", "ie", "ge", "am", "az", "ru", "xk", "pl", "de", "lu"];
-const middleEast = ["tr", "sy", "lb", "jo", "il", "ps", "iq", "ir", "kw", "bh", "qa", "ae", "om", "sa", "ye", "kz", "uz", "tm", "kg", "tj", "af", "pk"];
+const middleEast = ["tr", "sy", "lb", "jo", "il", "ps", "iq", "ir", "kw", "bh", "qa", "ae", "om", "sa", "ye", "kz", "uz", "tm", "kg", "tj", "af", "pk", "eg", "sd", "er", "et", "so"];
 const coreCountries = ["pl", "de", "lu", "ie", "sa", "ae"];
-const networkNodes: NetworkNode[] = [
-  { country: "ie", region: "europe", x: 48.1, y: 43.8, labelOffset: "-translate-x-[92%] -translate-y-[118%] text-right" },
-  { country: "lu", region: "europe", x: 50.2, y: 46.1, labelOffset: "-translate-x-[92%] translate-y-3 text-right" },
-  { country: "de", region: "europe", x: 51.2, y: 44.5, labelOffset: "-translate-x-[92%] -translate-y-[118%] text-right" },
-  { country: "pl", region: "europe", x: 53.2, y: 44.6, labelOffset: "translate-x-4 -translate-y-[118%] text-left" },
-  { country: "sa", region: "middle-east", x: 57.8, y: 56.5, labelOffset: "-translate-x-[92%] translate-y-3 text-right" },
-  { country: "ae", region: "middle-east", x: 59.4, y: 57.2, labelOffset: "translate-x-4 -translate-y-1/2 text-left" },
-];
 
-const networkConnections = networkNodes
-  .filter((node) => node.country !== "pl")
-  .map((node) => ({
-    from: "pl",
-    to: node.country,
-    d: `M53.2 44.6 C ${(53.2 + node.x) / 2} ${Math.min(41.5, node.y - 3)}, ${(53.2 + node.x) / 2} ${(44.6 + node.y) / 2}, ${node.x} ${node.y}`,
-  }));
+const networkLocations: NetworkLocation[] = [
+  { countryCode: "ie", region: "europe", locationType: "country", labelAnchor: "top-left" },
+  { countryCode: "lu", region: "europe", locationType: "country", labelAnchor: "bottom-left" },
+  { countryCode: "de", region: "europe", locationType: "country", labelAnchor: "top-right" },
+  { countryCode: "pl", region: "europe", locationType: "country", labelAnchor: "right" },
+  { countryCode: "sa", region: "middle-east", locationType: "country", labelAnchor: "bottom-left" },
+  { countryCode: "ae", region: "middle-east", locationType: "country", labelAnchor: "bottom-right" },
+];
 
 const filterLabels = {
   en: {
@@ -131,6 +164,7 @@ const filterLabels = {
     regionEurope: "Europe",
     regionMiddleEast: "Middle East",
     viewDetails: "View details",
+    region: "Region",
   },
   pl: {
     all: "Cała sieć",
@@ -143,6 +177,7 @@ const filterLabels = {
     regionEurope: "Europa",
     regionMiddleEast: "Bliski Wschód",
     viewDetails: "Zobacz szczegóły",
+    region: "Region",
   },
 };
 
@@ -152,19 +187,109 @@ const panelVariants = {
   exit: { opacity: 0, x: 16 },
 };
 
+const mapFeatures: GeoFeature[] = (countriesGeo.features as CountryGeometry[]).map((country) => ({
+  type: "Feature",
+  properties: {
+    name: country.N,
+    iso2: country.I.toLowerCase(),
+  },
+  geometry: {
+    type: "MultiPolygon",
+    coordinates: country.C,
+  },
+}));
+
+const featureByCode = new Map(mapFeatures.map((feature) => [feature.properties.iso2, feature]));
+
 function getRegion(country: string): Region {
   if (europe.includes(country)) return "europe";
   if (middleEast.includes(country)) return "middle-east";
   return "all";
 }
 
+function getBoundsForRegion(region: Region): GeoFeature[] {
+  const codes = region === "all" ? coreCountries : networkLocations.filter((location) => location.region === region).map((location) => location.countryCode);
+
+  return codes.map((code) => featureByCode.get(code)).filter((feature): feature is GeoFeature => Boolean(feature));
+}
+
+function getPadding(region: Region, selectedCode: string | null) {
+  if (region === "europe") return [[86, 92], [width - 150, height - 88]] as [[number, number], [number, number]];
+  if (region === "middle-east") return [[96, 92], [width - 158, height - 92]] as [[number, number], [number, number]];
+  if (selectedCode) return [[82, 92], [width - 390, height - 92]] as [[number, number], [number, number]];
+
+  return [[80, 86], [width - 120, height - 86]] as [[number, number], [number, number]];
+}
+
+function createProjection(region: Region, selectedCode: string | null, userZoom: number) {
+  const boundsFeatures = getBoundsForRegion(region);
+  const projection = geoMercator();
+  projection.fitExtent(getPadding(region, selectedCode), {
+    type: "FeatureCollection",
+    features: boundsFeatures,
+  });
+  projection.scale(projection.scale() * userZoom);
+
+  if (selectedCode) {
+    const selectedFeature = featureByCode.get(selectedCode);
+    if (selectedFeature) {
+      const [longitude, latitude] = geoCentroid(selectedFeature);
+      projection.center([longitude, latitude]);
+    }
+  }
+
+  return projection;
+}
+
+function labelOffset(anchor: LabelAnchor) {
+  const offsets: Record<LabelAnchor, { x: number; y: number; textAnchor: "start" | "middle" | "end"; dominantBaseline: "auto" | "middle" | "hanging" }> = {
+    top: { x: 0, y: -20, textAnchor: "middle", dominantBaseline: "auto" },
+    "top-right": { x: 17, y: -16, textAnchor: "start", dominantBaseline: "auto" },
+    right: { x: 18, y: 1, textAnchor: "start", dominantBaseline: "middle" },
+    "bottom-right": { x: 17, y: 18, textAnchor: "start", dominantBaseline: "hanging" },
+    bottom: { x: 0, y: 22, textAnchor: "middle", dominantBaseline: "hanging" },
+    "bottom-left": { x: -17, y: 18, textAnchor: "end", dominantBaseline: "hanging" },
+    left: { x: -18, y: 1, textAnchor: "end", dominantBaseline: "middle" },
+    "top-left": { x: -17, y: -16, textAnchor: "end", dominantBaseline: "auto" },
+  };
+
+  return offsets[anchor];
+}
+
+function greatCirclePath(from: [number, number], to: [number, number], projection: ReturnType<typeof geoMercator>) {
+  const interpolate = geoInterpolate(from, to);
+  const points = Array.from({ length: 34 }, (_, index) => interpolate(index / 33))
+    .map((point) => projection(point as [number, number]))
+    .filter((point): point is [number, number] => Boolean(point));
+
+  return points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+}
+
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      setSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+
+    resizeObserver.observe(ref.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return { ref, size };
+}
+
 export default function WorldMapComponent({ autoTour = false }: { autoTour?: boolean }) {
   const [selectedCountry, setSelectedCountry] = useState<CountryData | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1.18);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 64 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [camera, setCamera] = useState<CameraState>({ userZoom: 1 });
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isCursorVisible, setIsCursorVisible] = useState(false);
   const [isFinePointer, setIsFinePointer] = useState(false);
@@ -173,6 +298,7 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   const [filterRegion, setFilterRegion] = useState<Region>("all");
   const hasAutoToured = useRef(false);
   const reduced = useReducedMotion();
+  const { ref: mapAreaRef, size: mapAreaSize } = useElementSize<HTMLDivElement>();
   const { i18n, t } = useTranslation();
   const language = i18n.language?.startsWith("pl") ? "pl" : "en";
   const labels = filterLabels[language];
@@ -202,19 +328,57 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
   const selectedCode = selectedCountry?.country ?? null;
   const activeCode = hoveredCountry ?? selectedCode;
 
+  const projection = useMemo(() => {
+    return createProjection(filterRegion, selectedCode, camera.userZoom);
+  }, [camera.userZoom, filterRegion, selectedCode]);
+
+  const path = useMemo(() => geoPath(projection), [projection]);
+
+  const projectedLocations = useMemo<ProjectedLocation[]>(() => {
+    return networkLocations
+      .map((location) => {
+        const feature = featureByCode.get(location.countryCode);
+        const country = data.find((item) => item.country === location.countryCode);
+        if (!feature || !country) return null;
+
+        const coordinates = geoCentroid(feature) as [number, number];
+        const point = projection(coordinates);
+        if (!point) return null;
+
+        return {
+          ...location,
+          country,
+          coordinates,
+          x: point[0],
+          y: point[1],
+        };
+      })
+      .filter((location): location is ProjectedLocation => Boolean(location));
+  }, [data, projection]);
+
+  const projectedByCode = useMemo(() => new Map(projectedLocations.map((location) => [location.countryCode, location])), [projectedLocations]);
+  const activeProjectedLocations = useMemo(() => {
+    return projectedLocations.filter((location) => filterRegion === "all" || getRegion(location.countryCode) === filterRegion);
+  }, [filterRegion, projectedLocations]);
+
+  const networkConnections = useMemo(() => {
+    const hub = projectedByCode.get("pl");
+    if (!hub) return [];
+
+    return activeProjectedLocations
+      .filter((location) => location.countryCode !== "pl")
+      .map((location) => ({
+        from: "pl",
+        to: location.countryCode,
+        d: greatCirclePath(hub.coordinates, location.coordinates, projection),
+      }));
+  }, [activeProjectedLocations, projectedByCode, projection]);
+
   const setRegion = (region: Region) => {
     setFilterRegion(region);
     setSelectedCountry(null);
-    if (region === "europe") {
-      setZoomLevel(1.62);
-      setPanPosition({ x: 116, y: 92 });
-    } else if (region === "middle-east") {
-      setZoomLevel(1.72);
-      setPanPosition({ x: -112, y: 92 });
-    } else {
-      setZoomLevel(1.18);
-      setPanPosition({ x: 0, y: 64 });
-    }
+    setHoveredCountry(null);
+    setCamera({ userZoom: 1 });
   };
 
   const handleCountryClick = useCallback(
@@ -222,16 +386,13 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
       const code = countryCode.toLowerCase();
       const country = data.find((item) => item.country === code);
       if (!country) return;
+
       setSelectedCountry(country);
       setHoveredCountry(null);
-      const node = networkNodes.find((item) => item.country === code);
-      if (node && !reduced) {
-        setZoomLevel((currentZoom) => Math.max(currentZoom, 1.34));
-        setPanPosition({
-          x: Math.max(-180, Math.min(180, (53 - node.x) * 14)),
-          y: Math.max(-120, Math.min(120, (49 - node.y) * 10 + 46)),
-        });
-      }
+      setCamera((currentCamera) => ({
+        ...currentCamera,
+        userZoom: reduced ? currentCamera.userZoom : Math.max(1.08, currentCamera.userZoom),
+      }));
       setAnimatedCountries(new Set([code]));
       window.setTimeout(() => setAnimatedCountries(new Set()), 900);
     },
@@ -293,35 +454,14 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
     };
   }, [clearSelection]);
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
-    setDragStart({ x: event.clientX - panPosition.x, y: event.clientY - panPosition.y });
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setCursorPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-    if (!isDragging) return;
-    const maxPan = 220 * zoomLevel;
-    setPanPosition({
-      x: Math.max(-maxPan, Math.min(maxPan, event.clientX - dragStart.x)),
-      y: Math.max(-maxPan, Math.min(maxPan, event.clientY - dragStart.y)),
-    });
-  };
-
-  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setIsDragging(false);
-  };
+  const selectedPanelRegion = selectedCountry ? (getRegion(selectedCountry.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope) : "";
+  const cursorLocation = hoveredCountry ? data.find((item) => item.country === hoveredCountry) : null;
+  const panelHeading = selectedCountry ? selectedCountry.name.split(/\s+/).join("\n") : "";
+  const panelAvailable = typeof document !== "undefined";
+  const effectiveMapWidth = mapAreaSize.width || width;
+  const effectiveMapHeight = mapAreaSize.height || 640;
 
   const regionIsActive = (country: string) => filterRegion === "all" || getRegion(country) === filterRegion;
-  const selectedPanelRegion = selectedCountry ? (getRegion(selectedCountry.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope) : "";
-  const cursorCountry = hoveredCountry ? data.find((item) => item.country === hoveredCountry)?.name : null;
-  const panelHeading = selectedCountry ? selectedCountry.name.split(/\s+/).join("\n") : "";
 
   const isConnectionActive = (from: string, to: string) => {
     if (!selectedCode) return hoveredCountry === from || hoveredCountry === to || activeCode === from || activeCode === to;
@@ -336,12 +476,14 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
     return country === "pl";
   };
 
+  const visibleFeatureSet = new Set(visibleCountries);
+
   return (
     <div className="relative min-h-[70svh] overflow-hidden lg:min-h-[78svh]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_58%_50%,rgba(199,149,75,.18),transparent_30%),radial-gradient(circle_at_78%_62%,rgba(242,239,231,.075),transparent_22%)]" />
 
       <div className="absolute right-0 top-0 z-30 grid justify-items-end gap-3 text-right">
-        <span className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-[#c99a57]">Region</span>
+        <span className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-[#c99a57]">{labels.region}</span>
         <div className="-mr-2 flex max-w-[calc(100vw-2.5rem)] gap-5 overflow-x-auto px-2 pb-1 text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-[#f2efe7]/48">
           {(["all", "europe", "middle-east"] as Region[]).map((region) => (
             <button
@@ -361,95 +503,92 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
       </div>
 
       <div className="absolute bottom-3 right-0 z-30 flex items-center gap-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/58 md:bottom-5">
-          <button type="button" onClick={() => setZoomLevel((value) => Math.min(value + 0.3, 4))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomIn")}>
-            <Plus className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => setZoomLevel((value) => Math.max(value - 0.3, 0.9))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomOut")}>
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="mx-1 h-4 w-px bg-white/14" />
-          <button type="button" onClick={() => setRegion("all")} className="min-h-10 px-2 transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.resetView")}>
-            {labels.reset}
-          </button>
-          <button type="button" onClick={runTour} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.highlightTour")}>
-            <Sparkles className="h-4 w-4" />
-          </button>
+        <button type="button" onClick={() => setCamera((currentCamera) => ({ ...currentCamera, userZoom: Math.min(currentCamera.userZoom + 0.12, maxUserZoom) }))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomIn")}>
+          <Plus className="h-4 w-4" />
+        </button>
+        <button type="button" onClick={() => setCamera((currentCamera) => ({ ...currentCamera, userZoom: Math.max(currentCamera.userZoom - 0.12, minUserZoom) }))} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.zoomOut")}>
+          <Minus className="h-4 w-4" />
+        </button>
+        <span className="mx-1 h-4 w-px bg-white/14" />
+        <button type="button" onClick={() => setRegion("all")} className="min-h-10 px-2 transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.resetView")}>
+          {labels.reset}
+        </button>
+        <button type="button" onClick={runTour} className="grid min-h-10 min-w-10 place-items-center transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.controls.highlightTour")}>
+          <Sparkles className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="relative min-h-[560px] pt-12 md:min-h-[640px] lg:min-h-[700px] lg:pt-0">
         <div
-          className={`network-map-area absolute inset-0 overflow-hidden ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+          ref={mapAreaRef}
+          className="network-map-area absolute inset-0 overflow-hidden"
           onClick={(event) => {
             if (event.target === event.currentTarget) clearSelection();
           }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
+          onPointerMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setCursorPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+          }}
           onPointerEnter={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             setCursorPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
             setIsCursorVisible(true);
           }}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
           onPointerLeave={() => {
-            setIsDragging(false);
             setHoveredCountry(null);
             setIsCursorVisible(false);
           }}
         >
-          <div
-            className="absolute left-1/2 top-1/2 h-[520px] w-[1040px] sm:h-[600px] sm:w-[1200px] lg:h-[650px] lg:w-[1300px]"
-            style={{
-              transform: `translate(-50%, -50%) scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
-              transition: isDragging || reduced ? "none" : "transform 520ms cubic-bezier(.22,1,.36,1)",
-            }}
+          <motion.svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="xMidYMid meet"
+            className="absolute left-1/2 top-1/2 h-[min(104%,720px)] w-[min(100%,1280px)] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+            style={{ width: effectiveMapWidth, height: effectiveMapHeight }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: reduced ? 0.01 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+            role="img"
+            aria-label={t("worldMap.header.title")}
           >
-            <div className="absolute inset-0 flex items-center justify-center opacity-100">
-              <WorldMap
-                title=""
-                valueSuffix=""
-                color="#c99a57"
-                size={1000}
-                data={data}
-                frame={false}
-                richInteraction
-                tooltipBgColor="#171410"
-                tooltipTextColor="#f2efe7"
-                tooltipTextFunction={(context) => {
-                  const country = data.find((item) => item.country === context.countryCode?.toLowerCase());
-                  if (!country) return t("worldMap.tooltips.exploreOpportunities");
-                  const region = getRegion(country.country) === "middle-east" ? "MIDDLE EAST" : "EUROPE";
-                  return `${country.name} · ${region} · ${labels.viewDetails} ↗`;
-                }}
-                onClickFunction={(context) => handleCountryClick(context.countryCode)}
-                styleFunction={(context) => {
-                  const currentCountry = context.countryCode?.toLowerCase() || "";
-                  const country = data.find((item) => item.country === currentCountry);
-                  const isVisibleContext = visibleCountries.includes(currentCountry);
-                  const isRegionActive = regionIsActive(currentCountry);
-                  const isSelected = selectedCode === currentCountry;
-                  const isHovered = hoveredCountry === currentCountry;
-                  const isAnimated = animatedCountries.has(currentCountry);
-                  const isRelated = countryIsRelated(currentCountry);
+            <g>
+              {mapFeatures.map((feature) => {
+                const countryCode = feature.properties.iso2;
+                const country = data.find((item) => item.country === countryCode);
+                const isVisibleContext = visibleFeatureSet.has(countryCode);
+                const isRegionActive = regionIsActive(countryCode);
+                const countryIsInteractive = Boolean(country && isRegionActive);
+                const isSelected = selectedCode === countryCode;
+                const isHovered = hoveredCountry === countryCode;
+                const isAnimated = animatedCountries.has(countryCode);
+                const isRelated = countryIsRelated(countryCode);
 
-                  if (!isVisibleContext) {
-                    return { fill: "#151411", stroke: "#29241e", strokeWidth: 0.4, opacity: 0.36, pointerEvents: "none" };
-                  }
+                if (!isVisibleContext) return null;
 
-                  return {
-                    fill: country ? (isSelected || isHovered || isAnimated ? "#d8b36f" : country.color) : "#25211c",
-                    stroke: country ? "rgba(242,239,231,.42)" : "#3a332b",
-                    strokeWidth: country && (isSelected || isHovered || isAnimated) ? 1.45 : 0.65,
-                    cursor: country ? "pointer" : "default",
-                    opacity: country ? (isRegionActive ? (isRelated ? 1 : 0.34) : 0.2) : isRegionActive ? 0.58 : 0.2,
-                    transition: "fill 180ms ease, opacity 240ms ease, stroke-width 180ms ease",
-                    filter: isSelected || isAnimated ? "drop-shadow(0 0 5px rgba(201,154,87,.34))" : "none",
-                  };
-                }}
-              />
-            </div>
+                return (
+                  <path
+                    key={countryCode}
+                    d={path(feature) ?? undefined}
+                    fill={country ? (isSelected || isHovered || isAnimated ? "#d8b36f" : country.color) : "#25211c"}
+                    stroke={country ? "rgba(242,239,231,.42)" : "#3a332b"}
+                    strokeWidth={country && (isSelected || isHovered || isAnimated) ? 1.35 : 0.7}
+                    opacity={country ? (isRegionActive ? (isRelated ? 1 : 0.34) : 0.12) : isRegionActive ? 0.48 : 0.12}
+                    style={{
+                      cursor: countryIsInteractive ? "pointer" : "default",
+                      filter: isSelected || isAnimated ? "drop-shadow(0 0 5px rgba(201,154,87,.34))" : "none",
+                      transition: "fill 180ms ease, opacity 240ms ease, stroke-width 180ms ease",
+                    }}
+                    onClick={(event) => {
+                      if (!countryIsInteractive) return;
+                      event.stopPropagation();
+                      handleCountryClick(countryCode);
+                    }}
+                    onMouseEnter={() => countryIsInteractive && setHoveredCountry(countryCode)}
+                    onMouseLeave={() => setHoveredCountry(null)}
+                  />
+                );
+              })}
+            </g>
 
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <g fill="none" aria-hidden="true">
               {networkConnections.map((connection) => {
                 const connectionActive = isConnectionActive(connection.from, connection.to);
                 const connectionDimmed = selectedCode && !connectionActive;
@@ -458,191 +597,218 @@ export default function WorldMapComponent({ autoTour = false }: { autoTour?: boo
                   <motion.path
                     key={`${connection.from}-${connection.to}`}
                     d={connection.d}
-                    fill="none"
                     stroke="#c99a57"
-                    strokeWidth={connectionActive ? "0.22" : "0.12"}
+                    strokeWidth={connectionActive ? 2.3 : 1.25}
                     strokeLinecap="round"
                     pathLength="1"
                     initial={reduced ? false : { pathLength: 0, opacity: 0 }}
                     animate={
                       hasDrawnConnection || reduced
-                        ? { pathLength: 1, opacity: connectionActive ? 0.88 : connectionDimmed ? 0.12 : 0.34 }
+                        ? { pathLength: 1, opacity: connectionActive ? 0.82 : connectionDimmed ? 0.12 : 0.3 }
                         : { pathLength: 0, opacity: 0 }
                     }
                     transition={{ duration: reduced ? 0.01 : 1.05, ease: [0.22, 1, 0.36, 1] }}
                   />
                 );
               })}
-              {!reduced && hasDrawnConnection && !selectedCode && (
-                <circle r="0.3" fill="#d6b16d" opacity="0.62">
-                  <animateMotion dur="8s" repeatCount="indefinite" path="M53.2 44.6 C 55.2 46.8, 57.4 52, 59.4 57.2" />
-                </circle>
-              )}
-            </svg>
+            </g>
 
-            {networkNodes.map((node) => {
-              const country = data.find((item) => item.country === node.country);
-              if (!country) return null;
-              const isNodeActive = selectedCode === node.country || hoveredCountry === node.country || animatedCountries.has(node.country);
-              const isDimmed = !regionIsActive(node.country);
-              const isRelatedNode = countryIsRelated(node.country);
+            <g>
+              {activeProjectedLocations.map((location) => {
+                const isNodeActive = selectedCode === location.countryCode || hoveredCountry === location.countryCode || animatedCountries.has(location.countryCode);
+                const showDetailLabel = selectedCode === location.countryCode || hoveredCountry === location.countryCode;
+                const isDimmed = !regionIsActive(location.countryCode);
+                const isRelatedNode = countryIsRelated(location.countryCode);
+                const label = labelOffset(location.labelAnchor);
 
-              return (
-                <div key={node.country} className="absolute" style={{ left: `${node.x}%`, top: `${node.y}%` }}>
-                  <button
-                    type="button"
-                    aria-label={t("worldMap.accessibility.viewCountry", { country: country.name })}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleCountryClick(node.country);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        handleCountryClick(node.country);
-                      }
-                    }}
-                    onMouseEnter={() => setHoveredCountry(node.country)}
-                    onMouseLeave={() => setHoveredCountry(null)}
-                    onFocus={() => setHoveredCountry(node.country)}
-                    onBlur={() => setHoveredCountry(null)}
-                    className={`network-node relative grid place-items-center rounded-full bg-[#c99a57] transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#f2efe7] ${
-                      isNodeActive ? "h-5 w-5" : isRelatedNode ? "h-3.5 w-3.5" : "h-3 w-3"
-                    } ${isDimmed ? "opacity-25" : isRelatedNode ? "opacity-100" : "opacity-35"}`}
-                  >
-                    <span className={`absolute rounded-full border border-[#c99a57]/55 ${animatedCountries.has(node.country) ? "network-node-pulse h-8 w-8" : "h-5 w-5 opacity-30"}`} />
-                  </button>
-                  <motion.div
-                    initial={reduced ? false : { opacity: 0, y: 8 }}
-                    animate={{ opacity: isDimmed ? 0.18 : isNodeActive || isRelatedNode ? 1 : 0.32, y: 0 }}
-                    className={`pointer-events-none absolute top-0 min-w-28 text-[0.52rem] font-semibold uppercase leading-relaxed tracking-[0.2em] text-[#d2ad6b] ${
-                      node.country === "ae" ? "max-sm:-translate-x-[96%] max-sm:-translate-y-[118%] max-sm:text-right" : ""
-                    } ${node.labelOffset}`}
-                  >
-                    <span className="block">{country.name}</span>
-                    <span className="block text-[#f2efe7]/42">{getRegion(node.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope} · {country.established}</span>
-                  </motion.div>
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <g key={location.countryCode} opacity={isDimmed ? 0.24 : isRelatedNode ? 1 : 0.34}>
+                    <circle
+                      cx={location.x}
+                      cy={location.y}
+                      r={isNodeActive ? 12 : isRelatedNode ? 8.5 : 7}
+                      fill="#c99a57"
+                      stroke="rgba(242,239,231,.75)"
+                      strokeWidth={isNodeActive ? 2 : 1.2}
+                      className="transition-all duration-300"
+                    />
+                    <circle
+                      cx={location.x}
+                      cy={location.y}
+                      r={animatedCountries.has(location.countryCode) ? 25 : 15}
+                      fill="none"
+                      stroke="rgba(201,154,87,.42)"
+                      strokeWidth="1.2"
+                      className={animatedCountries.has(location.countryCode) ? "network-node-pulse" : ""}
+                    />
+                    <text
+                      x={location.x + label.x}
+                      y={location.y + label.y}
+                      textAnchor={label.textAnchor}
+                      dominantBaseline={label.dominantBaseline}
+                      className="pointer-events-none fill-[#d2ad6b] text-[0.68rem] font-semibold uppercase tracking-[0.2em]"
+                    >
+                      {location.country.name}
+                    </text>
+                    {showDetailLabel && (
+                      <text
+                        x={location.x + label.x}
+                        y={location.y + label.y + (label.dominantBaseline === "hanging" ? 16 : 14)}
+                        textAnchor={label.textAnchor}
+                        dominantBaseline={label.dominantBaseline}
+                        className="pointer-events-none fill-[#f2efe7] text-[0.54rem] font-semibold uppercase tracking-[0.18em] opacity-60"
+                      >
+                        {getRegion(location.countryCode) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope} · {location.country.established}
+                      </text>
+                    )}
+                    <foreignObject x={location.x - 22} y={location.y - 22} width="44" height="44">
+                      <button
+                        type="button"
+                        aria-label={t("worldMap.accessibility.viewCountry", { country: location.country.name })}
+                        className="h-11 w-11 rounded-full focus:outline-none focus:ring-2 focus:ring-[#f2efe7]"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleCountryClick(location.countryCode);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleCountryClick(location.countryCode);
+                          }
+                        }}
+                        onMouseEnter={() => setHoveredCountry(location.countryCode)}
+                        onMouseLeave={() => setHoveredCountry(null)}
+                        onFocus={() => setHoveredCountry(location.countryCode)}
+                        onBlur={() => setHoveredCountry(null)}
+                      />
+                    </foreignObject>
+                  </g>
+                );
+              })}
+            </g>
+          </motion.svg>
 
-          {isFinePointer && isCursorVisible && (isDragging || cursorCountry) && (
+          {isFinePointer && isCursorVisible && cursorLocation && (
             <div
-              className="pointer-events-none absolute z-50 hidden px-2 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/76 lg:block"
+              className="pointer-events-none absolute z-50 hidden rounded-md border border-white/[0.08] bg-[#0d0d0c]/88 px-3 py-2 text-[0.58rem] font-semibold uppercase leading-relaxed tracking-[0.18em] text-[#f2efe7]/76 shadow-[0_14px_36px_rgba(0,0,0,.28)] backdrop-blur-lg lg:block"
               style={{ left: cursorPosition.x + 14, top: cursorPosition.y + 14 }}
             >
-              {isDragging ? labels.exploring : `${labels.view} ${cursorCountry} ↗`}
+              <span className="block text-[#c99a57]">{cursorLocation.name}</span>
+              <span className="block text-[#f2efe7]/52">
+                {getRegion(cursorLocation.country) === "middle-east" ? labels.regionMiddleEast : labels.regionEurope} · {cursorLocation.established}
+              </span>
+              <span className="block">{labels.viewDetails} ↗</span>
             </div>
           )}
         </div>
 
-        {createPortal(
-        <AnimatePresence>
-          {selectedCountry && (
-            <motion.aside
-              role="region"
-              aria-label={t("worldMap.panel.ariaLabel", { country: selectedCountry.name })}
-              variants={panelVariants}
-              initial={reduced ? false : "hidden"}
-              animate="visible"
-              exit="exit"
-              transition={{ duration: reduced ? 0.01 : 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-x-4 bottom-4 z-[80] max-h-[58svh] overflow-y-auto rounded-t-2xl border border-white/[0.08] bg-[#0d0d0c]/94 p-5 text-[#f2efe7] shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-[16px] gdpr-modal-scroll md:inset-x-8 lg:inset-x-auto lg:bottom-10 lg:right-[max(3rem,calc((100vw-1540px)/2+3rem))] lg:top-32 lg:w-[420px] lg:max-h-none lg:rounded-2xl lg:p-6"
-            >
-              <div className="flex items-start justify-between gap-5">
-                <div>
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#c99a57]">
-                    {selectedCountry.country.toUpperCase()} / {selectedPanelRegion}
-                  </p>
-                  <div className="mt-5 overflow-hidden">
-                    <motion.h3
-                      key={`${selectedCountry.country}-title`}
-                      initial={reduced ? false : { y: "110%" }}
-                      animate={{ y: 0 }}
-                      transition={{ duration: reduced ? 0.01 : 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-                      className="whitespace-pre-line text-[clamp(2.3rem,4vw,3.4rem)] font-semibold uppercase leading-[0.92]"
-                    >
-                      {panelHeading}
-                    </motion.h3>
-                  </div>
-                </div>
-                <button type="button" onClick={clearSelection} className="grid min-h-10 min-w-10 shrink-0 place-items-center text-[#f2efe7]/58 transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.modal.closeModal")}>
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <motion.div
-                key={`${selectedCountry.country}-content`}
-                initial={reduced ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: reduced ? 0.01 : 0.45, delay: 0.16 }}
-              >
-                <section className="mt-5 border-t border-white/[0.08] pt-5">
-                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
-                    {t("worldMap.panel.dtoInCountry", { country: selectedCountry.name })}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[#d7cec0]/82">{selectedCountry.description}</p>
-                </section>
-
-                {selectedCountry.services && selectedCountry.services.length > 0 && (
-                  <section className="mt-6 border-t border-white/[0.08] pt-5">
-                    <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
-                      {t("worldMap.panel.whatWeDo")}
-                    </p>
-                    <div className="mt-4 grid gap-4">
-                      {selectedCountry.services.map((service, index) => (
-                        <div key={service.title} className="grid grid-cols-[1.8rem_1fr] gap-2">
-                          <span className="font-mono text-xs text-[#c99a57]/78">{String(index + 1).padStart(2, "0")}</span>
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f2efe7]">{service.title}</p>
-                            <p className="mt-1 text-sm leading-5 text-[#d7cec0]/72">{service.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                <section className="mt-6 border-t border-white/[0.08] pt-5">
-                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
-                    {t("worldMap.panel.sectors")}
-                  </p>
-                  <div className="mt-4 grid gap-2">
-                  {selectedCountry.industries.map((industry, index) => (
-                    <span key={industry} className="grid grid-cols-[1.6rem_1fr] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#f2efe7]/72">
-                      <span className="font-mono text-[#c99a57]/78">{String(index + 1).padStart(2, "0")}</span>
-                      {industry}
-                    </span>
-                  ))}
-                  </div>
-                </section>
-
-                <section className="mt-6 border-t border-white/[0.08] pt-5">
-                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
-                    {t("worldMap.panel.network")}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[#d7cec0]/78">
-                    {t("worldMap.panel.partnershipEstablished")} {selectedCountry.established}
-                  </p>
-                </section>
-
-                <Link
-                  to="Candidates & Employers"
-                  smooth
-                  duration={650}
-                  offset={-80}
-                  className="group mt-6 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-[#c99a57] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#0d0d0c] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f2efe7]"
+        {panelAvailable &&
+          createPortal(
+            <AnimatePresence>
+              {selectedCountry && (
+                <motion.aside
+                  role="region"
+                  aria-label={t("worldMap.panel.ariaLabel", { country: selectedCountry.name })}
+                  variants={panelVariants}
+                  initial={reduced ? false : "hidden"}
+                  animate="visible"
+                  exit="exit"
+                  transition={{ duration: reduced ? 0.01 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-x-4 bottom-4 z-[80] max-h-[58svh] overflow-y-auto rounded-t-2xl border border-white/[0.08] bg-[#0d0d0c]/94 p-5 text-[#f2efe7] shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-[16px] gdpr-modal-scroll md:inset-x-8 lg:inset-x-auto lg:bottom-10 lg:right-[max(3rem,calc((100vw-1540px)/2+3rem))] lg:top-32 lg:w-[420px] lg:max-h-none lg:rounded-2xl lg:p-6"
                 >
-                  {t("worldMap.panel.cta")}
-                  <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
-                </Link>
-              </motion.div>
-            </motion.aside>
+                  <div className="flex items-start justify-between gap-5">
+                    <div>
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#c99a57]">
+                        {selectedCountry.country.toUpperCase()} / {selectedPanelRegion}
+                      </p>
+                      <div className="mt-5 overflow-hidden">
+                        <motion.h3
+                          key={`${selectedCountry.country}-title`}
+                          initial={reduced ? false : { y: "110%" }}
+                          animate={{ y: 0 }}
+                          transition={{ duration: reduced ? 0.01 : 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+                          className="whitespace-pre-line text-[clamp(2.3rem,4vw,3.4rem)] font-semibold uppercase leading-[0.92]"
+                        >
+                          {panelHeading}
+                        </motion.h3>
+                      </div>
+                    </div>
+                    <button type="button" onClick={clearSelection} className="grid min-h-10 min-w-10 shrink-0 place-items-center text-[#f2efe7]/58 transition hover:text-[#c99a57] focus:outline-none focus:ring-2 focus:ring-[#c99a57]/70" aria-label={t("worldMap.modal.closeModal")}>
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <motion.div
+                    key={`${selectedCountry.country}-content`}
+                    initial={reduced ? false : { opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: reduced ? 0.01 : 0.45, delay: 0.16 }}
+                  >
+                    <section className="mt-5 border-t border-white/[0.08] pt-5">
+                      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
+                        {t("worldMap.panel.dtoInCountry", { country: selectedCountry.name })}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[#d7cec0]/82">{selectedCountry.description}</p>
+                    </section>
+
+                    {selectedCountry.services && selectedCountry.services.length > 0 && (
+                      <section className="mt-6 border-t border-white/[0.08] pt-5">
+                        <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
+                          {t("worldMap.panel.whatWeDo")}
+                        </p>
+                        <div className="mt-4 grid gap-4">
+                          {selectedCountry.services.map((service, index) => (
+                            <div key={service.title} className="grid grid-cols-[1.8rem_1fr] gap-2">
+                              <span className="font-mono text-xs text-[#c99a57]/78">{String(index + 1).padStart(2, "0")}</span>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f2efe7]">{service.title}</p>
+                                <p className="mt-1 text-sm leading-5 text-[#d7cec0]/72">{service.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    <section className="mt-6 border-t border-white/[0.08] pt-5">
+                      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
+                        {t("worldMap.panel.sectors")}
+                      </p>
+                      <div className="mt-4 grid gap-2">
+                        {selectedCountry.industries.map((industry, index) => (
+                          <span key={industry} className="grid grid-cols-[1.6rem_1fr] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#f2efe7]/72">
+                            <span className="font-mono text-[#c99a57]/78">{String(index + 1).padStart(2, "0")}</span>
+                            {industry}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="mt-6 border-t border-white/[0.08] pt-5">
+                      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#f2efe7]/48">
+                        {t("worldMap.panel.network")}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[#d7cec0]/78">
+                        {t("worldMap.panel.partnershipEstablished")} {selectedCountry.established}
+                      </p>
+                    </section>
+
+                    <Link
+                      to="Candidates & Employers"
+                      smooth
+                      duration={650}
+                      offset={-80}
+                      className="group mt-6 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-[#c99a57] px-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#0d0d0c] transition hover:bg-[#e0b66d] focus:outline-none focus:ring-2 focus:ring-[#f2efe7]"
+                    >
+                      {t("worldMap.panel.cta")}
+                      <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+                    </Link>
+                  </motion.div>
+                </motion.aside>
+              )}
+            </AnimatePresence>,
+            document.body,
           )}
-        </AnimatePresence>,
-        document.body
-        )}
       </div>
     </div>
   );
