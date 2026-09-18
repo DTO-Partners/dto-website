@@ -138,7 +138,7 @@ export default function About() {
             <motion.div style={{ opacity: marketsOpacity }} className="pointer-events-none absolute inset-0">
               <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <motion.path
-                  d="M54.2 41.8 C 62 43.5, 69.5 50.5, 76.2 63.5"
+                  d="M76.4 48.6 C 83.5 56, 89 71.5, 93.6 87.2"
                   fill="none"
                   stroke="#8f6a3b"
                   strokeWidth="0.18"
@@ -147,17 +147,17 @@ export default function About() {
                   style={{ strokeDashoffset: arcProgress }}
                   strokeLinecap="round"
                 />
-                <motion.circle cx="54.2" cy="41.8" r="0.62" fill="#8f6a3b" />
-                <motion.circle cx="76.2" cy="63.5" r="0.62" fill="#8f6a3b" />
+                <motion.circle cx="76.4" cy="48.6" r="0.62" fill="#8f6a3b" />
+                <motion.circle cx="93.6" cy="87.2" r="0.62" fill="#8f6a3b" />
               </svg>
-              <div className="absolute left-[52.2%] top-[37.2%] -translate-x-full text-right text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[#8f6a3b]">
+              <div className="absolute left-[74.6%] top-[44.4%] -translate-x-full text-right text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[#8f6a3b]">
                 Poland
                 <br />
                 52.2297 N
                 <br />
                 21.0122 E
               </div>
-              <div className="absolute left-[77.5%] top-[61%] text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[#8f6a3b]">
+              <div className="absolute left-[94.8%] top-[84%] text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[#8f6a3b]">
                 UAE
                 <br />
                 Dubai

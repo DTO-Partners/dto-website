@@ -6,6 +6,7 @@ import Hero from "@sections/Hero"
 import About from "@sections/About";
 import Values from "./sections/Values";
 import Testimonials from "./sections/Testimonials";
+import OurPeople from "./sections/OurPeople";
 
 //i18next
 import "@/lib/i18n";
@@ -23,6 +24,7 @@ function App() {
       <About/>
       <Values/>
       <Testimonials/>
+      <OurPeople/>
       <Markets/>
       <GDPRModal/>
       <ApplyForm/>
